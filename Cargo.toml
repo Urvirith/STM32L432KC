@@ -1,0 +1,25 @@
+[package]
+name = "STM32L432KC"
+version = "0.1.0"
+authors = ["Jake Mussler <jake.mussler@protonmail.com>"]
+edition = "2018"
+
+[lib]
+name = "cortex_m4"
+crate-type = ["staticlib"]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+# Optimize for size
+#opt-level = 'z'
+# Optimize At Link Stage
+#lto = true
+# Increase Compile Time For Smaller Size             
+#codegen-units = 1
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]

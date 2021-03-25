@@ -2,6 +2,7 @@
 /* Manual Page 235 */
 
 use super::common;
+use super::pointer;
 
 pub struct Gpio {
     moder:              *mut u32,           // Mode Register
@@ -78,48 +79,53 @@ impl Gpio {
     }
 
     pub fn get_pin(&self, val: u32) -> bool {
-        return common::get_ptr_vol_bit_u32(self.idr, val);
+        return pointer::get_ptr_vol_bit_u32(self.idr, val);
     }
 
     pub fn set_pin(&self, val: u32) {
-        common::get_ptr_vol_bit_u32(self.odr, val);
+        pointer::set_ptr_vol_bit_u32(self.odr, val);
     }
 
     pub fn clr_pin(&self, val: u32) {
-        common::get_ptr_vol_bit_u32(self.odr, val);
+        pointer::clr_ptr_vol_bit_u32(self.odr, val);
     }
 
     pub fn set_lock(&self, val: u32){
-        common::set_ptr_vol_bit_u32(self.lckr, val);
+        pointer::set_ptr_vol_bit_u32(self.lckr, val);
     }
     
     pub fn clr_lock(&self, val: u32){
-        common::clr_ptr_vol_bit_u32(self.lckr, val);
+        pointer::clr_ptr_vol_bit_u32(self.lckr, val);
     }
 
     pub fn otype(&self, bit: u32, mode: Mode, otype: OType, alt_func: AltFunc) {
-        common::set_ptr_vol_u32(self.moder, bit * MODER_OFFSET, MODER_MASK, mode as u32);
-        match otype {
-            OType::OpenDrain    =>      common::set_ptr_vol_bit_u32(self.otyper, 1 << bit),
-            OType::PushPull     =>      common::clr_ptr_vol_bit_u32(self.otyper, 1 << bit)
+        let alt;
+        match mode {
+            Mode::Alt => alt = true,
+            _ =>         alt = false
         }
 
-        match mode {
-            Mode::Alt =>  {
-                if bit <= 7 {
-                    common::set_ptr_vol_u32(self.afrl, bit * AF_OFFSET, AF_MASK, alt_func as u32);
-                } else {
-                    common::set_ptr_vol_u32(self.afrh, (bit - 8) * AF_OFFSET, AF_MASK, alt_func as u32);
-                }
-            }
+        pointer::set_ptr_vol_u32(self.moder, bit * MODER_OFFSET, MODER_MASK, mode as u32);
+        
+        match otype {
+            OType::OpenDrain    =>      pointer::set_ptr_vol_bit_u32(self.otyper, 1 << bit),
+            OType::PushPull     =>      pointer::clr_ptr_vol_bit_u32(self.otyper, 1 << bit)
+        }
+
+        if alt {
+            if bit <= 7 {
+                pointer::set_ptr_vol_u32(self.afrl, bit * AF_OFFSET, AF_MASK, alt_func as u32);
+            } else {
+                pointer::set_ptr_vol_u32(self.afrh, (bit - 8) * AF_OFFSET, AF_MASK, alt_func as u32);
+            } 
         }
     }
     
     pub fn ospeed(&self, bit: u32, mode: Mode) {
-        common::set_ptr_vol_u32(self.ospeedr, bit * OSPEED_OFFSET, OSPEED_MASK, mode as u32);
+        pointer::set_ptr_vol_u32(self.ospeedr, bit * OSPEED_OFFSET, OSPEED_MASK, mode as u32);
     }
     
     pub fn pupd(&self, bit: u32, mode: Mode) {
-        common::set_ptr_vol_u32(self.pupdr, bit * PUPD_OFFSET, PUPD_MASK, mode as u32);
+        pointer::set_ptr_vol_u32(self.pupdr, bit * PUPD_OFFSET, PUPD_MASK, mode as u32);
     }
 }

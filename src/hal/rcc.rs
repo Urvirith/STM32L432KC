@@ -2,6 +2,7 @@
 /* Manual Page 195 */
 
 use super::common;
+use super::pointer;
 
 pub struct Rcc {
     cr:             *mut u32,       // Control Register
@@ -119,33 +120,33 @@ impl Rcc {
 
     /* Set the clock speed of the chipset */
     pub fn write_msi_range(&self, freq_khz: u32) {
-        common::clr_ptr_vol_bit_u32(self.cr, MSI_ON_BIT);
-        common::set_ptr_vol_u32(self.cr, MSI_RANGE_OFFSET, MSI_RANGE_MASK, freq_khz);
-        common::set_ptr_vol_bit_u32(self.cr, MSI_RANGE_BIT);
-        common::set_ptr_vol_bit_u32(self.cr, MSI_ON_BIT);
+        pointer::clr_ptr_vol_bit_u32(self.cr, MSI_ON_BIT);
+        pointer::set_ptr_vol_u32(self.cr, MSI_RANGE_OFFSET, MSI_RANGE_MASK, freq_khz);
+        pointer::set_ptr_vol_bit_u32(self.cr, MSI_RANGE_BIT);
+        pointer::set_ptr_vol_bit_u32(self.cr, MSI_ON_BIT);
     }
 
     pub fn write_ahb1_enr(&self, val: u32) {
-        common::set_ptr_vol_bit_u32(self.ahb1_enr, val);
+        pointer::set_ptr_vol_bit_u32(self.ahb1_enr, val);
     }
     
     pub fn write_ahb2_enr(&self, val: u32) {
-        common::set_ptr_vol_bit_u32(self.ahb2_enr, val);
+        pointer::set_ptr_vol_bit_u32(self.ahb2_enr, val);
     }
     
     pub fn write_ahb3_enr(&self, val: u32) {
-        common::set_ptr_vol_bit_u32(self.ahb3_enr, val);
+        pointer::set_ptr_vol_bit_u32(self.ahb3_enr, val);
     }
     
     pub fn write_apb1_enr1(&self, val: u32) {
-        common::set_ptr_vol_bit_u32(self.apb1_enr1, val);
+        pointer::set_ptr_vol_bit_u32(self.apb1_enr1, val);
     }
     
     pub fn write_apb1_enr2(&self, val: u32) {
-        common::set_ptr_vol_bit_u32(self.apb1_enr2, val);
+        pointer::set_ptr_vol_bit_u32(self.apb1_enr2, val);
     }
     
     pub fn write_apb2_enr(&self, val: u32) {
-        common::set_ptr_vol_bit_u32(self.apb2_enr, val);
+        pointer::set_ptr_vol_bit_u32(self.apb2_enr, val);
     }
 }

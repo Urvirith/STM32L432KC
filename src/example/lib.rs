@@ -1,5 +1,4 @@
 // EASE OF UNDERSTANDING EXAMPLE OF HOW TO READ AND WRITE FROM A CHIP SET THIS IS AN EXAMPLE OF AN STM32L432KC Nucleo Board,
-
 #![no_std]
 use core::ptr;
 
@@ -23,15 +22,13 @@ const RCC_BASE:     u32 = 0x40021000;
 const RCC_AHB2ENR:  u32 = RCC_BASE + 0x4C;
 
 #[no_mangle]
-pub extern fn system_init()
-{
+pub extern fn system_init() {
     // RCC SHOULD ALWAYS BE IN THE SYSTEM INIT TRYING TO OPERATE THE GPIO PINS EVEN ACTIVATING WILL CAUSE ISSUES
     unsafe{ptr::write_volatile((RCC_AHB2ENR) as *mut u32, (1<<GPIOB_CLOCK) | (1<<GPIOA_CLOCK))};  // EN CLK FOR GPIO B and A
 }
 
 #[no_mangle]
-pub extern fn start()
-{
+pub extern fn start() {
     // Initialize the LED on L432KC board  
     unsafe{ptr::write_volatile((GPIOB_MODER) as *mut u32, 1<<(USER_LED1 * 2))};
     unsafe{ptr::write_volatile((GPIOB_OTYPER) as *mut u32, !(1<<(USER_LED1)))};
@@ -41,8 +38,8 @@ pub extern fn start()
     loop
     {
 
-        while i <= 1000000 {
-            if i == 500000 {
+        while i <= 10000000 {
+            if i == 5000000 {
                 unsafe{ptr::write_volatile((GPIOB_BSRR) as *mut u32, 1<<USER_LED1)};
             } else if i == 0 {
                 unsafe{ptr::write_volatile((GPIOB_BSRR) as *mut u32, 1<<(USER_LED1 + 16))}

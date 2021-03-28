@@ -2,8 +2,8 @@
 pub mod common;
 pub mod rcc;
 pub mod gpio;
-
-mod timer;
+pub mod timer;
+pub mod usart;
 
 /* Private Modules */
 mod pointer;

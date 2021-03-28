@@ -33,7 +33,7 @@ BLD_DIR	  	:= build/
 
 release: build/main.bin
 
-# Build An ELF 
+# Copy to a bin file
 build/main.bin: build/main.elf
 	$(OBJ) $(OBJFLAGS) $^ $@
 
@@ -45,14 +45,17 @@ $(BLD_DIR)main.elf: $(LINKER_DIR)gcc_arm.ld $(BLD_DIR)main.o $(BLD_DIR)startup.o
 $(BLD_DIR)startup.o: $(STARTUP_DIR)startup_ARMCM4.S
 	$(AS) $< $(ASFLAGS) -o $@
 
+# Build The Rust Project, .cargo and Cargo.Toml hold the flags for this
 $(BLD_DIR)main.o:
 	cargo build --release
 
+# Clean The Build Folder To Allow For A Complete Rebuild
 clean:
 	rm -f $(BLD_DIR)*.o
 	rm -f $(BLD_DIR)*.elf
 	rm -f $(BLD_DIR)*.bin
 	cargo clean
 
+# Flash the board us st-flash utility
 flash:
 	st-flash write $(BLD_DIR)main.bin 0x08000000

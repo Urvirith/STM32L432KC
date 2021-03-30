@@ -9,7 +9,7 @@ pub extern fn system_init() {
     /* RCC Enabling of the bus */
     let rcc = hal::rcc::Rcc::init(board::l432kc::RCC_BASE);
 
-    rcc.write_msi_range(hal::rcc::MsiRange::Clk16MHz);
+    rcc.write_msi_range(hal::common::MsiRange::Clk16MHz);
     rcc.write_ahb2_enr(board::l432kc::GPIOA_RCC_AHB2_ENABLE);
     rcc.write_ahb2_enr(board::l432kc::GPIOB_RCC_AHB2_ENABLE);
     rcc.write_apb1_enr1(board::l432kc::TIMER2_RCC_APB1R1_ENABLE);
@@ -19,7 +19,7 @@ pub extern fn system_init() {
 
 #[no_mangle]
 pub extern fn start() {
-    let freq = hal::rcc::range(hal::rcc::MsiRange::Clk16MHz);
+    let freq = hal::common::range(hal::common::MsiRange::Clk16MHz);
     // Initialize the LED on L432KC board
     let gpioa = hal::gpio::Gpio::init(board::l432kc::GPIOA_BASE);  
     let gpiob = hal::gpio::Gpio::init(board::l432kc::GPIOB_BASE);
@@ -39,9 +39,24 @@ pub extern fn start() {
 
     let mut i = false;
 
-    let dogmeat = [0x44, 0x6F, 0x67, 0x6D, 0x65, 0x61, 0x74, 0x0D];
+    //let dogmeat = [0x44, 0x6F, 0x67, 0x6D, 0x65, 0x61, 0x74, 0x0D];
+    let mut buf: [u8; 10] = [0; 10]; // TESTING REFLECT BACK
 
     loop {
+        if usart.get_read() {
+            let len = usart.read(&mut buf, 0x0D);
+
+
+            if len > 0 {
+                usart.write(&buf[0..8]);
+                usart.write(&[0x44, len as u8, 0x0D]); 
+            } else if len == -1 {
+                usart.write(&[0x44, 0x22, 0x0D]); 
+            } else {
+                usart.write(&[0x44, 0x23, 0x0D]); 
+            }
+        } 
+
         if seq_timer.get_flag() {
             if i {
                 gpiob.set_pin(board::l432kc::USER_LED_BIT);
@@ -50,7 +65,7 @@ pub extern fn start() {
                 gpiob.clr_pin(board::l432kc::USER_LED_BIT);
                 i = true;
             }
-            usart.write(&dogmeat);
+            //usart.write(&dogmeat);
             seq_timer.clr_flag();
         }
 	}

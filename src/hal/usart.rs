@@ -207,33 +207,34 @@ impl Usart {
     }
     
     // MOVE TO a uint8_t pointer can slim down the data being transfered here. Set up test for reading USART and reflecting!!
-    pub fn read(&self, buf: &mut [u8]) -> i32{
+    pub fn read(&self, buf: &mut [u8], term: u8) -> i32{
         pointer::set_ptr_vol_raw_u32(self.icr, RTOCF_BIT);
         pointer::set_ptr_vol_raw_u32(self.icr, FECF_BIT);
         pointer::set_ptr_vol_raw_u32(self.icr, IDLECF_BIT);
         pointer::set_ptr_vol_raw_u32(self.icr, ORECR_BIT);
     
-        let mut i = 0; // Index based on len
+        let mut len = 0; // Index based on len
         let mut t: u32 = 0;  // Index for loop trap, if line goes idle, prevent being trapped by dead line. Convert to fail timer for more accurate usage.
     
-        while i < buf.len(){
+        while len < buf.len(){
             if self.get_read() {
-                buf[i] = pointer::get_ptr_vol_raw_u8(self.rdr);
-                i+=1;
+                buf[len] = pointer::get_ptr_vol_raw_u8(self.rdr);
+                if (term != 0x00) && (buf[len] == term){
+                    return (len + 1) as i32;
+                }
+                len+=1;
             }
     
             if pointer::get_ptr_vol_bit_u32(self.isr, FE_BIT) | pointer::get_ptr_vol_bit_u32(self.isr, IDLE_BIT) | pointer::get_ptr_vol_bit_u32(self.isr, ORE_BIT) {
                 return -1;
             }
     
-            if t > 100000 {
+            if t > 100000 { // IDLED OUT
                 return -2;
             }
-    
             t+=1;
         }
-
-        return i as i32;
+        return len as i32;
     }
     
     // p. 1202

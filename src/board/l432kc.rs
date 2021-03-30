@@ -23,6 +23,11 @@ pub const TIMER16_BASE:             u32 = 0x40014400;
 pub const USART1_BASE:              u32 = 0x40013800;
 pub const USART2_BASE:              u32 = 0x40004400;      
 pub const USART3_BASE:              u32 = 0x40004800;
+
+
+pub const I2C1_BASE:                u32 = 0x40005400; 
+//pub const I2C2_BASE:                u32 = 0x40005800; Does not exist in the 432KC
+pub const I2C3_BASE:                u32 = 0x40005C00;
       
 /* Reset and Clock Control (RCC) */
 pub const GPIOA_RCC_AHB2_ENABLE:    u32 = common::BIT_0;

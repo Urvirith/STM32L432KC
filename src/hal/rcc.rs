@@ -71,9 +71,6 @@ const CSR:              u32 = 0x94;
 const CRRCR:            u32 = 0x98;
 const CCIPR2:           u32 = 0x9C;
 
-// Enumeration of avaliable ranges of clocks
-pub enum MsiRange {Clk100kHz, Clk200kHz, Clk400kHz, Clk800kHz, Clk1MHz, Clk2MHz, Clk4MHz, Clk8MHz, Clk16MHz, Clk24MHz, Clk32MHz, Clk48MHz}
-
 /* Register Bits */
 const MSI_ON_BIT:           u32 = common::BIT_0;
 const MSI_RANGE_BIT:        u32 = common::BIT_3;
@@ -122,7 +119,7 @@ impl Rcc {
     }
 
     /* Set the clock speed of the chipset */
-    pub fn write_msi_range(&self, rng: MsiRange) {
+    pub fn write_msi_range(&self, rng: common::MsiRange) {
         pointer::clr_ptr_vol_bit_u32(self.cr, MSI_ON_BIT);
         pointer::set_ptr_vol_u32(self.cr, MSI_RANGE_OFFSET, MSI_RANGE_MASK, rng as u32);
         pointer::set_ptr_vol_bit_u32(self.cr, MSI_RANGE_BIT);
@@ -151,22 +148,5 @@ impl Rcc {
     
     pub fn write_apb2_enr(&self, val: u32) {
         pointer::set_ptr_vol_bit_u32(self.apb2_enr, val);
-    }
-}
-
-pub fn range(range: MsiRange) -> u32 {
-    return match range {
-        MsiRange::Clk100kHz   =>  100, 
-        MsiRange::Clk200kHz   =>  200, 
-        MsiRange::Clk400kHz   =>  400, 
-        MsiRange::Clk800kHz   =>  800, 
-        MsiRange::Clk1MHz     =>  1000, 
-        MsiRange::Clk2MHz     =>  2000, 
-        MsiRange::Clk4MHz     =>  4000, 
-        MsiRange::Clk8MHz     =>  8000, 
-        MsiRange::Clk16MHz    =>  16000, 
-        MsiRange::Clk24MHz    =>  24000, 
-        MsiRange::Clk32MHz    =>  32000, 
-        MsiRange::Clk48MHz    =>  48000
     }
 }

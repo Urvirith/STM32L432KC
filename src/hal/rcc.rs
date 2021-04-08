@@ -82,6 +82,7 @@ const MSI_RANGE_MASK:       u32 = common::MASK_4_BIT;       /* MSI is mask requi
 const MSI_RANGE_OFFSET:     u32 = 4;                        /* MSI Offset is 4 Bits */
 
 impl Rcc {
+    /* Initialize The Structure */
     pub fn init(base: u32) -> Rcc {
         return Rcc {
             cr:             (base + CR)             as *mut u32,

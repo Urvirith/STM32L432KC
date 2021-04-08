@@ -42,7 +42,7 @@ pub enum OType {PushPull, OpenDrain}
 pub enum OSpeed {Low, Medium, High, VeryHigh}
 
 // 00: No pull-up, pull-down     01: Pull-up     10: Pull-down     11: Reserved
-pub enum Pupd {GpioIn, GpioOut, GpioAlt, GpioAn}
+pub enum Pupd {NoPuPd, Pu, Pd}
 
 /* 0000: AF0     0001: AF1     0010: AF2     0011: AF3     0100: AF4     0101: AF5
    0110: AF6     0111: AF7     1000: AF8     1001: AF9     1010: AF10    1011: AF11
@@ -62,6 +62,7 @@ const PUPD_OFFSET:      u32 = 2;                        /* Pu Speed is two bits 
 const AF_OFFSET:        u32 = 4;                        /* Alternate Function is four bits wide, shift by an offset of 4 */
 
 impl Gpio {
+    /* Initialize The Structure */
     pub fn init(base: u32) -> Gpio {
         return Gpio {
             moder:      (base + MODER)      as *mut u32,
@@ -78,26 +79,32 @@ impl Gpio {
         };
     }
 
+    /* Get The Pin */
     pub fn get_pin(&self, val: u32) -> bool {
         return pointer::get_ptr_vol_bit_u32(self.idr, val);
     }
 
+    /* Set The Pin */
     pub fn set_pin(&self, val: u32) {
         pointer::set_ptr_vol_bit_u32(self.odr, val);
     }
 
+    /* Clear The Pin */
     pub fn clr_pin(&self, val: u32) {
         pointer::clr_ptr_vol_bit_u32(self.odr, val);
     }
 
+    /* Set Lock */
     pub fn set_lock(&self, val: u32){
         pointer::set_ptr_vol_bit_u32(self.lckr, val);
     }
     
+    /* Clear Lock */
     pub fn clr_lock(&self, val: u32){
         pointer::clr_ptr_vol_bit_u32(self.lckr, val);
     }
 
+    /* Set Pin Type And Alternate Function */
     pub fn otype(&self, bit: u32, mode: Mode, otype: OType, alt_func: AltFunc) {
         let alt;
         match mode {
@@ -112,6 +119,7 @@ impl Gpio {
             OType::PushPull     =>      pointer::clr_ptr_vol_bit_u32(self.otyper, 1 << bit)
         }
 
+        /* If Alternate Function */
         if alt {
             if bit <= 7 {
                 pointer::set_ptr_vol_u32(self.afrl, bit * AF_OFFSET, AF_MASK, alt_func as u32);
@@ -121,11 +129,13 @@ impl Gpio {
         }
     }
     
-    pub fn ospeed(&self, bit: u32, mode: Mode) {
-        pointer::set_ptr_vol_u32(self.ospeedr, bit * OSPEED_OFFSET, OSPEED_MASK, mode as u32);
+    /* Set Pin Speed */
+    pub fn ospeed(&self, bit: u32, speed: OSpeed) {
+        pointer::set_ptr_vol_u32(self.ospeedr, bit * OSPEED_OFFSET, OSPEED_MASK, speed as u32);
     }
     
-    pub fn pupd(&self, bit: u32, mode: Mode) {
+    /* Set Pull Up Pull Down Mode */
+    pub fn pupd(&self, bit: u32, mode: Pupd) {
         pointer::set_ptr_vol_u32(self.pupdr, bit * PUPD_OFFSET, PUPD_MASK, mode as u32);
     }
 }

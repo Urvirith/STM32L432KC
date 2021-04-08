@@ -61,16 +61,16 @@ const RDR:      u32 = 0x24;
 const TDR:      u32 = 0x28;
 
 /* Enumerations */
-// Oversample Size, 16-Bits Oversample, 8-Bits Oversample
+/* Oversample Size, 16-Bits Oversample, 8-Bits Oversample */
 pub enum OverSample {Oversample16, Oversample8}
 
-// Word Length 0 = 8-Bits, 1 = 9-Bits 2 = 7-Bits
+/* Word Length 0 = 8-Bits, 1 = 9-Bits 2 = 7-Bits */
 pub enum WordLen {Bits8, Bits9, Bits7}
 
-// Stop Bit Length, 0 = 1-Bit, 1 = 0.5 Bit, 2 = 2 Bit, 3 = 1.5 Bit
+/* Stop Bit Length, 0 = 1-Bit, 1 = 0.5 Bit, 2 = 2 Bit, 3 = 1.5 Bit */
 pub enum StopLen {StopBit1, StopBit05, StopBit2, StopBit15}
 
-// Baud Rates
+/* Baud Rates */
 pub enum BaudRate {
     Baud1200    = 1200, 
     Baud1800    = 1800,
@@ -136,22 +136,24 @@ const RTO_TIMEO_OFFSET: u32 = 0;
 const OVER8_SHIFT:      u32 = 1;
 
 impl Usart {
+    /* Initialize The Structure */
     pub fn init(base: u32) -> Usart {
         return Usart {
-            cr1: (base + CR1) as *mut u32,
-            cr2: (base + CR2) as *mut u32,
-            cr3: (base + CR3) as *mut u32,
-            brr: (base + BRR) as *mut u32,
-            gtpr: (base + GTPR) as *mut u32,
-            rtor: (base + RTOR) as *mut u32,
-            rqr: (base + RQR) as *mut u32,
-            isr: (base + ISR) as *mut u32,
-            icr: (base + ICR) as *mut u32,
-            rdr: (base + RDR) as *mut u8,
-            tdr: (base + TDR) as *mut u8
+            cr1:    (base + CR1)    as *mut u32,
+            cr2:    (base + CR2)    as *mut u32,
+            cr3:    (base + CR3)    as *mut u32,
+            brr:    (base + BRR)    as *mut u32,
+            gtpr:   (base + GTPR)   as *mut u32,
+            rtor:   (base + RTOR)   as *mut u32,
+            rqr:    (base + RQR)    as *mut u32,
+            isr:    (base + ISR)    as *mut u32,
+            icr:    (base + ICR)    as *mut u32,
+            rdr:    (base + RDR)    as *mut u8,
+            tdr:    (base + TDR)    as *mut u8
         }
     }
 
+    /* Open The USART Driver, Set Word Length, Baud Rate, Oversample */
     pub fn open(&self, word_len: WordLen, stop: StopLen, baud: BaudRate, sclk_khz: u32, samp: OverSample) { 
         match word_len {
             WordLen::Bits8 => {
@@ -206,7 +208,7 @@ impl Usart {
         return pointer::get_ptr_vol_bit_u32(self.isr, RXNE_BIT);
     }
     
-    // MOVE TO a uint8_t pointer can slim down the data being transfered here. Set up test for reading USART and reflecting!!
+    /* Read From The RX Register */
     pub fn read(&self, buf: &mut [u8], term: u8) -> i32{
         pointer::set_ptr_vol_raw_u32(self.icr, RTOCF_BIT);
         pointer::set_ptr_vol_raw_u32(self.icr, FECF_BIT);
@@ -214,7 +216,7 @@ impl Usart {
         pointer::set_ptr_vol_raw_u32(self.icr, ORECR_BIT);
     
         let mut len = 0; // Index based on len
-        let mut t: u32 = 0;  // Index for loop trap, if line goes idle, prevent being trapped by dead line. Convert to fail timer for more accurate usage.
+        let mut i: u32 = 0;  // Index for loop trap, if line goes idle, prevent being trapped by dead line. Convert to fail timer for more accurate usage.
     
         while len < buf.len(){
             if self.get_read() {
@@ -229,28 +231,31 @@ impl Usart {
                 return -1;
             }
     
-            if t > 100000 { // IDLED OUT
+            if i > 100000 { // IDLED OUT
                 return -2;
             }
-            t+=1;
+            i+=1;
         }
         return len as i32;
     }
     
-    // p. 1202
-    // Character transmission procedure
-    // 1. Program the M bits in USART_CR1 to define the word length.
-    // 2. Select the desired baud rate using the USART_BRR register.
-    // 3. Program the number of stop bits in USART_CR2.
-    // 4. Enable the USART by writing the UE bit in USART_CR1 register to 1.
-    // 5. Select DMA enable (DMAT) in USART_CR3 if multibuffer communication is to take place.
-    //    Configure the DMA register as explained in multibuffer communication.
-    // 6. Set the TE bit in USART_CR1 to send an idle frame as first transmission.
-    // 7. Write the data to send in the USART_TDR register (this clears the TXE bit).
-    //    Repeat this for each data to be transmitted in case of single buffer.
-    // 8. After writing the last data into the USART_TDR register, wait until TC=1.
-    //    This indicates that the transmission of the last frame is complete.
-    //    This is required for instance when the USART is disabled or enters the Halt mode to avoid corrupting the last transmission.
+    /*
+        p. 1202
+        Character transmission procedure
+        1. Program the M bits in USART_CR1 to define the word length.
+        2. Select the desired baud rate using the USART_BRR register.
+        3. Program the number of stop bits in USART_CR2.
+        4. Enable the USART by writing the UE bit in USART_CR1 register to 1.
+        5. Select DMA enable (DMAT) in USART_CR3 if multibuffer communication is to take place.
+           Configure the DMA register as explained in multibuffer communication.
+        6. Set the TE bit in USART_CR1 to send an idle frame as first transmission.
+        7. Write the data to send in the USART_TDR register (this clears the TXE bit).
+           Repeat this for each data to be transmitted in case of single buffer.
+        8. After writing the last data into the USART_TDR register, wait until TC=1.
+           This indicates that the transmission of the last frame is complete.
+           This is required for instance when the USART is disabled or enters the Halt mode to avoid corrupting the last transmission.
+    */
+    /* Write To The TX Register */
     pub fn write(&self, buf: &[u8]) {
         pointer::set_ptr_vol_bit_u32(self.cr1, TE_BIT);
     
@@ -270,11 +275,13 @@ impl Usart {
         pointer::clr_ptr_vol_bit_u32(self.cr1, TE_BIT);
     }
     
-    // USARTDIV is an unsigned fixed point number that is coded on the USART_BRR register.
-    // • When OVER8 = 0, BRR = USARTDIV.
-    // • When OVER8 = 1 – BRR[2:0] = USARTDIV[3:0] shifted 1 bit to the right.
-    //   – BRR[3] must be kept cleared.
-    //   – BRR[15:4] = USARTDIV[15:4]
+    /*
+        USARTDIV is an unsigned fixed point number that is coded on the USART_BRR register.
+        • When OVER8 = 0, BRR = USARTDIV.
+        • When OVER8 = 1 – BRR[2:0] = USARTDIV[3:0] shifted 1 bit to the right.
+        – BRR[3] must be kept cleared.
+        – BRR[15:4] = USARTDIV[15:4]
+    */
     fn clock_setup(&self, baud: BaudRate, sclk_khz: u32, samp: OverSample) -> u32 {
         match samp {
             OverSample::Oversample8     =>  {

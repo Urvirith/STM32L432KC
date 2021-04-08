@@ -81,6 +81,7 @@ const CKD_OFFSET:       u32 = 8;                        /* 00 = Tdts = Tclk_int 
 const CLEAR_CNT:        u32 = 0;  
 
 impl Timer {
+    /* Initialize The Structure */
     pub fn init(base: u32) -> Timer {
         return Timer {
             cr1:    (base + CR1)    as *mut u32,
@@ -105,6 +106,7 @@ impl Timer {
         };
     }
 
+    /* Open The Timer And Setup Function */
     pub fn open(&self, timer_type: TimerType, dir: Direction) {
         pointer::clr_ptr_vol_bit_u32(self.cr1, UDIS_BIT);
         pointer::clr_ptr_vol_bit_u32(self.cr1, URS_BIT);
@@ -125,40 +127,55 @@ impl Timer {
         pointer::clr_ptr_vol_bit_u32(self.cr1, UIFREMAP_BIT);
     }
     
+    /* Get Interrupt Flag */
     pub fn get_flag(&self) -> bool {
         return pointer::get_ptr_vol_bit_u32(self.sr, UPDATE_BIT);
     }
     
+    /* Clear Interrupt Flag */
     pub fn clr_flag(&self) {
         pointer::clr_ptr_vol_bit_u32(self.sr, UPDATE_BIT);
     }
     
-    pub fn read_count(&self) -> u32 {
+    /* Read Counter */
+    pub fn get_cnt(&self) -> u32 {
         return pointer::get_ptr_vol_raw_u32(self.cnt);
     }
-    
-    pub fn clr_count(&self) {
+
+    /* Clear Counter */
+    pub fn clr_cnt(&self) {
         pointer::set_ptr_vol_raw_u32(self.cnt, CLEAR_CNT);
     }
     
+    /* Start Timer */
     pub fn start(&self) {
         pointer::set_ptr_vol_bit_u32(self.cr1, EN_BIT);
     }
     
+    /* Stop Timer */
     pub fn stop(&self,) {
         pointer::clr_ptr_vol_bit_u32(self.cr1, EN_BIT);
     }
     
-    pub fn set_time(&self, time: u32, clock_speed: u32, prescale: u32) {  
+    /* Set Time and Scaling Of The Timer */
+    pub fn set_scaling(&self, time: u32, clock_speed: u32, prescl: u32) {  
         let val;
         
-        if prescale == 0 {
+        if prescl == 0 {
             val = time * clock_speed;
         } else {
-            val = (time * clock_speed) / prescale;
+            val = (time * clock_speed) / prescl;
         }
     
-        pointer::set_ptr_vol_raw_u32(self.psc, prescale);
+        pointer::set_ptr_vol_raw_u32(self.psc, prescl);
         pointer::set_ptr_vol_raw_u32(self.arr, val);
+    }
+
+    /* Simple Spin And Wait On A Timer */
+    pub fn wait(&self) {
+        while self.get_flag() == false {
+            // BLANK WAIT, WORKS DUE TO VOLITILE READ
+        }
+        self.clr_flag();
     }
 }

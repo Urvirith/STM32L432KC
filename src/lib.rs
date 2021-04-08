@@ -2,6 +2,7 @@
 use core::panic::PanicInfo;
 mod board;
 mod hal;
+mod driver;
 
 
 #[no_mangle]
@@ -15,6 +16,7 @@ pub extern fn system_init() {
     rcc.write_apb1_enr1(board::l432kc::TIMER2_RCC_APB1R1_ENABLE);
     rcc.write_apb1_enr1(board::l432kc::TIMER2_RCC_APB1R1_ENABLE);
     rcc.write_apb1_enr1(board::l432kc::USART2_RCC_APB1R1_ENABLE);
+    rcc.write_apb1_enr1(board::l432kc::I2C1_RCC_APB1R1_ENABLE);
 }
 
 #[no_mangle]
@@ -24,15 +26,26 @@ pub extern fn start() {
     let gpioa = hal::gpio::Gpio::init(board::l432kc::GPIOA_BASE);  
     let gpiob = hal::gpio::Gpio::init(board::l432kc::GPIOB_BASE);
     let usart = hal::usart::Usart::init(board::l432kc::USART2_BASE);
+    let i2c = hal::i2c::I2c::init(board::l432kc::I2C1_BASE);
     let seq_timer = hal::timer::Timer::init(board::l432kc::TIMER2_BASE);
 
     /* USART Setup */
     gpioa.otype(board::l432kc::USART2_TX, hal::gpio::Mode::Alt, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af7);
     gpioa.otype(board::l432kc::USART2_RX, hal::gpio::Mode::Alt, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af7);
 
+    /* I2C Setup */
+    gpiob.otype(board::l432kc::I2C1_SCL, hal::gpio::Mode::Alt, hal::gpio::OType::OpenDrain, hal::gpio::AltFunc::Af4);
+    gpiob.otype(board::l432kc::I2C1_SDA, hal::gpio::Mode::Alt, hal::gpio::OType::OpenDrain, hal::gpio::AltFunc::Af4);
+    gpiob.ospeed(board::l432kc::I2C1_SCL, hal::gpio::OSpeed::Low);
+    gpiob.ospeed(board::l432kc::I2C1_SDA, hal::gpio::OSpeed::Low);
+    gpiob.pupd(board::l432kc::I2C1_SCL, hal::gpio::Pupd::NoPuPd);
+    gpiob.pupd(board::l432kc::I2C1_SDA, hal::gpio::Pupd::NoPuPd);
+
+    /* LED */
     gpiob.otype(board::l432kc::USER_LED, hal::gpio::Mode::Out, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af0);
+
     seq_timer.open(hal::timer::TimerType::Cont, hal::timer::Direction::Upcount);
-    seq_timer.set_time(500, freq, 1500);
+    seq_timer.set_scaling(500, freq, 1500);
     seq_timer.start();
 
     usart.open(hal::usart::WordLen::Bits8, hal::usart::StopLen::StopBit1, hal::usart::BaudRate::Baud9600, freq, hal::usart::OverSample::Oversample16);
@@ -48,6 +61,10 @@ pub extern fn start() {
 
 
             if len > 0 {
+                if (len as usize) < buf.len() {
+                    usart.write(&buf[0..8]);
+                    usart.write(&[0x44, len as u8, 0x0D]); 
+                }
                 usart.write(&buf[0..8]);
                 usart.write(&[0x44, len as u8, 0x0D]); 
             } else if len == -1 {

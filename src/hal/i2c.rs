@@ -15,7 +15,7 @@ pub struct I2c {
     icr:        *mut u32,       // Interrupt Flag Clear Register
     pecr:       *mut u32,       // PEC Register
     rxdr:       *mut u8,        // Receive Data Register
-    txdr:       *mut u8,        // Transmit Data Register
+    txdr:       *mut u8         // Transmit Data Register
 }
 
 /* Register Offset */
@@ -85,7 +85,24 @@ const READ:             bool = false;
 const WRITE:            bool = true;
 const LEN_1_BYTE:       u32 = 1;
 
-impl I2c {     
+impl I2c { 
+    /* Initialize The Structure */
+    pub fn init(base: u32) -> I2c {
+        return I2c {
+            cr1:        (base + CR1)        as *mut u32,
+            cr2:        (base + CR2)        as *mut u32,
+            oar1:       (base + OAR1)       as *mut u32,
+            oar2:       (base + OAR2)       as *mut u32,
+            timingr:    (base + TIMINGR)    as *mut u32,
+            timeoutr:   (base + TIMEOUTR)   as *mut u32,
+            isr:        (base + ISR)        as *mut u32,
+            icr:        (base + ICR)        as *mut u32,
+            pecr:       (base + PECR)       as *mut u32,
+            rxdr:       (base + RXDR)       as *mut u8,
+            txdr:       (base + TXDR)       as *mut u8
+        };
+    }
+    
     // Initalization Flow ->
     // Clear PE bit in I2C_CR1
     // Configure ANFOFF and DNF[3:0] in I2C_CR1
@@ -335,7 +352,7 @@ impl I2c {
         return true;
     }
 
-    pub fn i2c_std_write(&self, slave_addr: u32, addr_10bit: bool, req_10bit: bool, buf: &[u8]) -> u8 {
+    pub fn std_write(&self, slave_addr: u32, addr_10bit: bool, req_10bit: bool, buf: &[u8]) -> u8 {
         self.setup(slave_addr, addr_10bit, req_10bit, buf.len() as u32, WRITE);
         let start = self.start();
         let write = self.write(buf);

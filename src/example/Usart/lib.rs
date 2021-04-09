@@ -1,19 +1,16 @@
 #![no_std]
-
 use core::panic::PanicInfo;
 mod board;
 mod hal;
 mod driver;
 
-/* Set Clock In One Area */
-const CLK: hal::common::MsiRange = hal::common::MsiRange::Clk16MHz;
 
 #[no_mangle]
-pub extern fn sys_init() {
+pub extern fn system_init() {
     /* RCC Enabling of the bus */
     let rcc = hal::rcc::Rcc::init(board::l432kc::RCC_BASE);
 
-    rcc.write_msi_range(CLK);
+    rcc.write_msi_range(hal::common::MsiRange::Clk16MHz);
     rcc.write_ahb2_enr(board::l432kc::GPIOA_RCC_AHB2_ENABLE);
     rcc.write_ahb2_enr(board::l432kc::GPIOB_RCC_AHB2_ENABLE);
     rcc.write_apb1_enr1(board::l432kc::TIMER2_RCC_APB1R1_ENABLE);
@@ -24,7 +21,7 @@ pub extern fn sys_init() {
 
 #[no_mangle]
 pub extern fn start() {
-    let freq = hal::common::range(CLK);
+    let freq = hal::common::range(hal::common::MsiRange::Clk16MHz);
     // Initialize the LED on L432KC board
     let gpioa = hal::gpio::Gpio::init(board::l432kc::GPIOA_BASE);  
     let gpiob = hal::gpio::Gpio::init(board::l432kc::GPIOB_BASE);
@@ -48,15 +45,35 @@ pub extern fn start() {
     gpiob.otype(board::l432kc::USER_LED, hal::gpio::Mode::Out, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af0);
 
     seq_timer.open(hal::timer::TimerType::Cont, hal::timer::Direction::Upcount);
-    seq_timer.set_scaling(5000, freq, 1500);
+    seq_timer.set_scaling(500, freq, 1500);
     seq_timer.start();
 
     usart.open(hal::usart::WordLen::Bits8, hal::usart::StopLen::StopBit1, hal::usart::BaudRate::Baud9600, freq, hal::usart::OverSample::Oversample16);
-    i2c.open(CLK, hal::i2c::TimingMode::Fm400KHz);
 
     let mut i = false;
 
+    //let dogmeat = [0x44, 0x6F, 0x67, 0x6D, 0x65, 0x61, 0x74, 0x0D];
+    let mut buf: [u8; 10] = [0; 10]; // TESTING REFLECT BACK
+
     loop {
+        if usart.get_read() {
+            let len = usart.read(&mut buf, 0x0D);
+
+
+            if len > 0 {
+                if (len as usize) < buf.len() {
+                    usart.write(&buf[0..8]);
+                    usart.write(&[0x44, len as u8, 0x0D]); 
+                }
+                usart.write(&buf[0..8]);
+                usart.write(&[0x44, len as u8, 0x0D]); 
+            } else if len == -1 {
+                usart.write(&[0x44, 0x22, 0x0D]); 
+            } else {
+                usart.write(&[0x44, 0x23, 0x0D]); 
+            }
+        } 
+
         if seq_timer.get_flag() {
             if i {
                 gpiob.set_pin(board::l432kc::USER_LED_BIT);

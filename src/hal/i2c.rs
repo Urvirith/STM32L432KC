@@ -322,19 +322,18 @@ impl I2c {
     //    the NACKF flag is set in the I2C_ISR register, and an interrupt is generated if the NACKIE bit is set.
     pub fn write(&self, buf: &[u8]) -> bool {
         let mut i = 0; 
+        let mut t = 0; // CONVERT TO FAULT TIMER
 
         while i < buf.len() {
-            let mut t = 0; // CONVERT TO FAULT TIMER
-
-            while !pointer::get_ptr_vol_bit_u32(self.isr, TXIS_BIT) {
-                if t > 100000 {
+            if pointer::get_ptr_vol_bit_u32(self.isr, TXIS_BIT) {
+                pointer::set_ptr_vol_raw_u8(self.txdr, buf[i]);
+                i+=1;
+            } else {
+                if t > 100000 { // Convert to fault timer rather than else statement
                     return false;
                 }
                 t+=1;
             }
-
-            pointer::set_ptr_vol_raw_u8(self.txdr, buf[i]);
-            i+=1;
         }
         return true;
     }
@@ -364,9 +363,9 @@ impl I2c {
             val += 1;
         }
 
-        if !write {
-            val += 2;
-        }
+        //if !write {
+        //    val += 2;
+        //}
 
         if !tc {
             val += 4;

@@ -90,7 +90,7 @@ pub fn check_fail(buf: &[i16]) -> bool {
     let mut i = 0;
 
     while i < buf.len() {
-        if buf[i] != 0 {
+        if buf[i] != 771 {
             return false;
         }
         i += 1;

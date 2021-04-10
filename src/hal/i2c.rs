@@ -246,19 +246,19 @@ impl I2c {
     //          Setting the START bit clears the TC flag and the START condition, followed by slave address, are sent on the bus.
     //          A STOP condition can be requested by setting the STOP bit in the I2C_CR2 register. Setting the STOP bit clears the TC flag and the STOP condition is sent on the bus. 
     pub fn read(&self, buf: &mut [u8]) -> bool {
-        let mut i = 0; 
-
+        let mut i = 0;
+        let mut t = 0;
         while i < buf.len() {
-            let mut t = 0; // CONVERT TO FAULT TIMER
-
-            while !pointer::get_ptr_vol_bit_u32(self.isr, RXNE_BIT) {
-                if t > 100000 {
+            if pointer::get_ptr_vol_bit_u32(self.isr, RXNE_BIT) {
+                buf[i] = pointer::get_ptr_vol_raw_u8(self.rxdr);
+                i+=1;
+                t=0;
+            } else {
+                if t > 100000 { // Convert to fault timer rather than else statement
                     return false;
                 }
                 t+=1;
             }
-            buf[i] = pointer::get_ptr_vol_raw_u8(self.rxdr);
-            i+=1;
         }
         return true;
     }

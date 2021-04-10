@@ -215,28 +215,29 @@ impl Usart {
         pointer::set_ptr_vol_raw_u32(self.icr, IDLECF_BIT);
         pointer::set_ptr_vol_raw_u32(self.icr, ORECR_BIT);
     
-        let mut len = 0; // Index based on len
-        let mut i: u32 = 0;  // Index for loop trap, if line goes idle, prevent being trapped by dead line. Convert to fail timer for more accurate usage.
+        let mut i = 0; // Index based on len
+        let mut t: u32 = 0;  // Index for loop trap, if line goes idle, prevent being trapped by dead line. Convert to fail timer for more accurate usage.
     
-        while len < buf.len(){
+        while i < buf.len(){
             if self.get_read() {
-                buf[len] = pointer::get_ptr_vol_raw_u8(self.rdr);
-                if (term != 0x00) && (buf[len] == term){
-                    return (len + 1) as i32;
+                buf[i] = pointer::get_ptr_vol_raw_u8(self.rdr);
+                if (term != 0x00) && (buf[i] == term){
+                    return (i + 1) as i32;
                 }
-                len+=1;
+                i+=1;
+                t=0;
+            } else {
+                if t > 100000 { // IDLED OUT
+                    return -2;
+                }
+                t+=1;
             }
     
             if pointer::get_ptr_vol_bit_u32(self.isr, FE_BIT) | pointer::get_ptr_vol_bit_u32(self.isr, IDLE_BIT) | pointer::get_ptr_vol_bit_u32(self.isr, ORE_BIT) {
                 return -1;
             }
-    
-            if i > 100000 { // IDLED OUT
-                return -2;
-            }
-            i+=1;
         }
-        return len as i32;
+        return i as i32;
     }
     
     /*
@@ -257,9 +258,8 @@ impl Usart {
     */
     /* Write To The TX Register */
     pub fn write(&self, buf: &[u8]) {
-        pointer::set_ptr_vol_bit_u32(self.cr1, TE_BIT);
-    
         let mut i = 0;
+        pointer::set_ptr_vol_bit_u32(self.cr1, TE_BIT);
         
         while i < buf.len(){
             if pointer::get_ptr_vol_bit_u32(self.isr, TXE_BIT) {

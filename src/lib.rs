@@ -4,10 +4,12 @@ use core::panic::PanicInfo;
 mod board;
 mod hal;
 mod driver;
+mod routine;
 
 /* Set Clock In One Area */
-const CLK: hal::common::MsiRange = hal::common::MsiRange::Clk16MHz;
-
+const CLK:          hal::common::MsiRange = hal::common::MsiRange::Clk16MHz;
+//const RNG:          i2c::fxos8700::Acc = i2c::fxos8700::Acc::Rng2G;
+//const GYRO:         i2c::fxas21002c::GyroSens = i2c::fxas21002c::GyroSens::Dps250;
 #[no_mangle]
 pub extern fn sys_init() {
     /* RCC Enabling of the bus */
@@ -48,16 +50,20 @@ pub extern fn start() {
     gpiob.otype(board::l432kc::USER_LED, hal::gpio::Mode::Out, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af0);
 
     seq_timer.open(hal::timer::TimerType::Cont, hal::timer::Direction::Upcount);
-    seq_timer.set_scaling(5000, freq, 1500);
+    seq_timer.set_scaling(500, freq, 1500);
     seq_timer.start();
 
     usart.open(hal::usart::WordLen::Bits8, hal::usart::StopLen::StopBit1, hal::usart::BaudRate::Baud9600, freq, hal::usart::OverSample::Oversample16);
     i2c.open(CLK, hal::i2c::TimingMode::Fm400KHz);
 
+    routine::flight_bus::init(&i2c, &usart, &seq_timer);
+
     let mut i = false;
 
     loop {
         if seq_timer.get_flag() {
+            routine::flight_bus::read(&i2c, &usart);
+
             if i {
                 gpiob.set_pin(board::l432kc::USER_LED_BIT);
                 i = false;

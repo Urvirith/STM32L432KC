@@ -1,5 +1,4 @@
-use crate::hal::i2c::I2c;
-use crate::hal::timer::Timer;
+use crate::hal::{i2c::I2c, timer::Timer};
 
 // DEFAULT ADDRESS
 pub const ADDR_PCA9685:         u32 = 0x40;

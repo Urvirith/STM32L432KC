@@ -1,8 +1,7 @@
 // Contain and utilize the bus logic
-use crate::hal::timer::Timer;
-use crate::hal::usart::Usart;
-use crate::hal::i2c::I2c;
+use crate::hal::{timer::Timer, usart::Usart, i2c::I2c};
 use crate::driver::i2c;
+
 
 const ALT_BEGIN:    u8 = 0x01;
 const MAG_BEGIN:    u8 = 0x02;

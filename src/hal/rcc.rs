@@ -1,8 +1,7 @@
 /* Reset and Clock Control (RCC) */
 /* Manual Page 195 */
 
-use super::common;
-use super::pointer;
+use super::{common, pointer};
 
 pub struct Rcc {
     cr:             *mut u32,       // Control Register

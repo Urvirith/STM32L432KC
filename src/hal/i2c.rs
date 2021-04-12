@@ -1,8 +1,7 @@
 /* Inter-Integrated Circuit (I2C) */
 /* Manual Page 1127 */
 
-use super::common;
-use super::pointer;
+use super::{common, pointer};
 
 pub struct I2c {
     cr1:        *mut u32,       // Control Register 1

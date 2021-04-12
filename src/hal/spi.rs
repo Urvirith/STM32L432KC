@@ -1,8 +1,8 @@
 /* Serial Peripheral Interface */
 /* Manual Page 1304 */
 
-use super::common;
-use super::pointer;
+use super::{common, pointer};
+
 /*
     SPI registers
     The peripheral registers can be accessed 
@@ -30,13 +30,53 @@ const RXCRCR:   u32 = 0x14;
 const TXCRCR:   u32 = 0x18;
 
 /* Enumerations */
-// 00: Input mode     01: General purpose output mode     10: Alternate function mode     11: Analog mode (reset state)
-pub enum Mode {In, Out, Alt, An}
+// CPHA = 0 READS THE FIRST BIT ON RISING EDGE OF CLOCK, CPHA = 1 READS THE FIRST BIT ON FALLING EDGE OF CLOCK
+// CPOL IS HOW THE CLOCK BEHAVES, CPOL = TRUE, CLOCK IS HIGH UNTIL USED, FALSE CLOCK IS LOW UNTILL USED
+pub enum ClockSetup {RisingEdgeClockLow, FallingEdgeClockLow, RisingEdgeClockHigh, FallingEdgeClockHigh}
+
+// Least Significant Bit First, Most Significiant Bit First
+pub enum BitFirst {Lsb, Msb}
+
+// BR: Baud rate control 000: fPCLK/2 001: fPCLK/4 010: fPCLK/8 011: fPCLK/16 100: fPCLK/32 101: fPCLK/64 110: fPCLK/128 111: fPCLK/256
+pub enum BaudRateDiv {Clk2, Clk4, Clk8, Clk16, Clk32, Clk64, Clk128, Clk256}
+
+// These bits configure the data length for SPI transfers.
+// 0000: Not used 0001: Not used 0010: Not used 
+// 0011: 4-bit 0100: 5-bit 0101: 6-bit
+// 0110: 7-bit 0111: 8-bit 1000: 9-bit
+// 1001: 10-bit 1010: 11-bit 1011: 12-bit
+// 1100: 13-bit 1101: 14-bit 1110: 15-bit
+// 1111: 16-bit
+// If software attempts to write one of the “Not used” values, 
+// they are forced to the value “0111”(8-bit)
+pub enum DataSize {
+    Bits4   = 0x03,
+    Bits5   = 0x04,
+    Bits6   = 0x05,
+    Bits7   = 0x06,
+    Bits8   = 0x07,
+    Bits9   = 0x08,
+    Bits10  = 0x09,
+    Bits11  = 0x0A,
+    Bits12  = 0x0B,
+    Bits13  = 0x0C,
+    Bits14  = 0x0D,
+    Bits15  = 0x0E,
+    Bits16  = 0x0F,
+}
 
 /* Register Bits */
 /* CR1 */
+const CPHA_BIT:         u32 = common::BIT_0;
+const CPOL_BIT:         u32 = common::BIT_1;
+const MSTR_BIT:         u32 = common::BIT_2;
 const SPE_BIT:          u32 = common::BIT_6;
+const LSBFIRST_BIT:     u32 = common::BIT_7;
+const SSI_BIT:          u32 = common::BIT_8;
+const SSM_BIT:          u32 = common::BIT_9;
+const CRCL_BIT:         u32 = common::BIT_11;
 const CRCNEXT_BIT:      u32 = common::BIT_12;
+const CRCEN_BIT:        u32 = common::BIT_13;
 
 /* SR */
 const RXNE_BIT:         u32 = common::BIT_0;
@@ -52,6 +92,9 @@ const FRE_BIT:          u32 = common::BIT_8;
 /* CR1 */
 const BR_MASK:          u32 = common::MASK_3_BIT;
 
+/* CR2 */
+const DS_MASK:          u32 = common::MASK_4_BIT;
+
 /* SR */
 const FRLVL_MASK:       u32 = common::MASK_2_BIT;
 const FTLVL_MASK:       u32 = common::MASK_2_BIT;
@@ -59,6 +102,9 @@ const FTLVL_MASK:       u32 = common::MASK_2_BIT;
 /* Register Offsets */
 /* CR1 */
 const BR_OFFSET:        u32 = 3;                        /* Mode is two bits wide, shift by an offset of 2 */
+
+/* CR2 */
+const DS_OFFSET:        u32 = 8;
 
 /* SR */
 const FRLVL_OFFSET:     u32 = 9;
@@ -104,8 +150,71 @@ impl Spi {
     //            read access size for the SPIx_DR register.
     //      f)    Initialize LDMA_TX and LDMA_RX bits if DMA is used in packed mode.
     // 4.     Write to SPI_CRCPR register: Configure the CRC polynomial if needed.
-    pub fn open(&self) {
+    pub fn open(&self, br: BaudRateDiv, cs: ClockSetup, bit: BitFirst, ds: DataSize) {
+        pointer::set_ptr_vol_u32(self.cr1, BR_OFFSET, BR_MASK, br as u32);
 
+        match cs {                 // WILL BE COVERED BY THE DEVICES (Example nRF8001 is SCK LOW -> CPOL IS FALSE)                 
+            ClockSetup::RisingEdgeClockLow => {
+                pointer::clr_ptr_vol_bit_u32(self.cr1, CPHA_BIT);
+                pointer::clr_ptr_vol_bit_u32(self.cr1, CPOL_BIT);
+            } ClockSetup::FallingEdgeClockLow => {
+                pointer::set_ptr_vol_bit_u32(self.cr1, CPHA_BIT);
+                pointer::clr_ptr_vol_bit_u32(self.cr1, CPOL_BIT);
+            } ClockSetup::RisingEdgeClockHigh => {
+                pointer::clr_ptr_vol_bit_u32(self.cr1, CPHA_BIT);
+                pointer::set_ptr_vol_bit_u32(self.cr1, CPOL_BIT);
+            } ClockSetup::FallingEdgeClockHigh => {
+                pointer::set_ptr_vol_bit_u32(self.cr1, CPHA_BIT);
+                pointer::set_ptr_vol_bit_u32(self.cr1, CPOL_BIT);
+            }
+        }
+
+        // Flow control needed if Unidirection (Half Duplex Comms)
+        //self.ioctl_set_cr1(BIDIOE); 
+        //self.ioctl_clr_cr1(BIDIMODE);
+
+        match bit {
+            BitFirst::Lsb => pointer::set_ptr_vol_bit_u32(self.cr1, LSBFIRST_BIT),
+            BitFirst::Msb => pointer::clr_ptr_vol_bit_u32(self.cr1, LSBFIRST_BIT)
+        }
+
+        // MIGHT REQIRE PROGRAMMING LATER CURRENLY SET UP FOR CRC 8 BIT
+        pointer::set_ptr_vol_bit_u32(self.cr1, CRCL_BIT);
+        pointer::set_ptr_vol_bit_u32(self.cr1, CRCEN_BIT);
+
+        // MIGHT REQIRE PROGRAMMING LATER CURRENLY SET UP HARDWARE SLAVE MANAGEMENT / PG. 1078 is for the Master with multiple slaves
+        pointer::set_ptr_vol_bit_u32(self.cr1, SSI_BIT);
+        pointer::set_ptr_vol_bit_u32(self.cr1, SSM_BIT);
+
+        // SET MASTER MODE
+        pointer::set_ptr_vol_bit_u32(self.cr1, MSTR_BIT);
+
+        // DATA SIZE
+        pointer::set_ptr_vol_u32(self.cr2, DS_OFFSET, DS_MASK, ds as u32);
+
+        /*
+        // CURRENTLY SET UP FOR MULTI MASTER MODE CONFIGURATION
+        self.ioctl_clr_cr2(SSOE);
+
+        match mode {
+            0 => {
+                // NSSP MODE
+                self.ioctl_clr_cr1(CPHA);
+                self.ioctl_clr_cr2(FRF);
+                self.ioctl_set_cr2(NSSP);
+            }
+            1 => {
+                // TI MODE
+                self.ioctl_clr_cr2(NSSP);
+                self.ioctl_set_cr2(FRF);
+            }
+            _ => {
+                // SOMETHING MIGHT NEED TO BE PLACED HERE???
+            }
+        }
+        */
+
+        //self.ioctl_set_crcpr(crc_poly);
     }
 
     //  The master at full-duplex (or in any transmit-only mode) starts to communicate when the SPI is enabled and TXFIFO is not empty,

@@ -1,8 +1,7 @@
 /* Timers */
 /* Manual Page 965 */
 
-use super::common;
-use super::pointer;
+use super::{common, pointer};
 
 pub struct Timer {
     cr1:        *mut u32,       // Control Register 1

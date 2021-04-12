@@ -1,8 +1,7 @@
 /* General Purpose I/O */
 /* Manual Page 235 */
 
-use super::common;
-use super::pointer;
+use super::{common, pointer};
 
 pub struct Gpio {
     moder:              *mut u32,           // Mode Register

@@ -1,8 +1,7 @@
 /* USART (Universal Synchronous and Asynchronous Receiver Transmitter) */
 /* Manual Page 1194 */
 
-use super::common;
-use super::pointer;
+use super::{common, pointer};
 
 // Any USART bidirectional communication requires a minimum of two pins: Receive data In (RX) and Transmit data Out (TX):
 // • RX: Receive data Input. This is the serial data input.
@@ -86,7 +85,7 @@ pub enum BaudRate {
     Baud230400  = 230400,
     Baud460800  = 460800, 
     Baud576000  = 576000,
-    Baud921600  = 921600, 
+    Baud921600  = 921600 
 }
 
 const SCLK_HZ:          u32 = 1000;

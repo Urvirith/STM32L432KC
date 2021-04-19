@@ -1,6 +1,8 @@
 /* CAN (Controller Area Network) */
 /* Manual Page 1476 */
 
+use super::{common, pointer};
+
 pub struct Can {
     mcr:        *mut u32,       // Master Control Register
     msr:        *mut u32,       // Master Status Register
@@ -72,11 +74,80 @@ const FS1R:     u32 = 0x020C;
 const FFA1R:    u32 = 0x0214;
 const FA1R:     u32 = 0x021C;
 
+/* Config Struct */
+pub struct CanInit {
+    txfp:       bool,       // Transmit FIFO Priority
+    rflm:       bool,       // Receive FIFO Locked mode
+    nart:       bool,       // No Automatic Retransmission
+    awum:       bool,       // Automatic Wakeup Mode
+    abom:       bool,       // Automatic Bus-off Management
+    ttcm:       bool,       // Time Triggered Communication Mode
+    brp:        u32,        // Baud Rate Prescaler
+    ts1:        u32,        // Time Segment 1
+    ts2:        u32,        // Time Segment 2
+    sjw:        u32         // Resynchronization Jump Width
+}
+
+/* Enumerations */
+/* Baud Rates */
+pub enum BaudRate {Baud125kB, Baud250kB, Baud500kB, Baud1MB}
+
+pub fn baud(br: BaudRate) -> u32 {
+    return match br {
+        BaudRate::Baud125kB => 16,
+        BaudRate::Baud250kB => 8,
+        BaudRate::Baud500kB => 4,
+        BaudRate::Baud1MB   => 2
+    };
+}
+
+/* Register Masks */
+const TIMEOUT:          u32 = 0x0000FFFF;
+
+
+/* BTR */
+const BRP_MASK:         u32 = common::MASK_9_BIT;
+const TS1_MASK:         u32 = common::MASK_4_BIT;
+const TS2_MASK:         u32 = common::MASK_3_BIT;
+const SJW_MASK:         u32 = common::MASK_2_BIT;
+
+/* Register Bits */
+/* MCR */
+const INRQ_BIT:         u32 = common::BIT_0;
+const SLRQ_BIT:         u32 = common::BIT_1;
+const TXFP_BIT:         u32 = common::BIT_2;
+const RFLM_BIT:         u32 = common::BIT_3;
+const NART_BIT:         u32 = common::BIT_4;
+const AWUM_BIT:         u32 = common::BIT_5;
+const ABOM_BIT:         u32 = common::BIT_6;
+const TTCM_BIT:         u32 = common::BIT_7;
+
+/* MSR */
+const INAK_BIT:         u32 = common::BIT_0;
+const SLAK_BIT:         u32 = common::BIT_1;
+
+/* BTR */
+const LBKM_BIT:         u32 = common::BIT_30;
+const SILM_BIT:         u32 = common::BIT_31;
+
+/* TSR */
+const TME0_BIT:         u32 = common::BIT_26;
+const TME1_BIT:         u32 = common::BIT_27;
+const TME2_BIT:         u32 = common::BIT_28;
+
+/* Register Offsets */
+/* BTR */
+const BRP_OFFSET:       u32 = 0;
+const TS1_OFFSET:       u32 = 16;
+const TS2_OFFSET:       u32 = 20;
+const SJW_OFFSET:       u32 = 24;
+
 impl Can {
     /* Initialize The Structure */
     pub fn init(base: u32) -> Can {
         return Can {
             msr:        (base + MSR)        as *mut u32,
+            mcr:        (base + MCR)        as *mut u32,
             tsr:        (base + TSR)        as *mut u32,
             rf0r:       (base + RF0R)       as *mut u32,
             rf1r:       (base + RF1R)       as *mut u32,
@@ -109,5 +180,149 @@ impl Can {
             ffa1r:      (base + FFA1R)      as *mut u32,
             fa1r:       (base + FA1R)       as *mut u32
         };
+    }
+
+    // The software initialization can be done while the hardware is in Initialization mode. 
+    // To enter this mode the software sets the INRQ bit in the CAN_MCR register and waits 
+    // until the hardware has confirmed the request by setting the INAK bit in the CAN_MSR register.
+    // To leave Initialization mode, the software clears the INQR bit. 
+    // bxCAN has left Initialization mode once the INAK bit has been cleared by hardware.
+    // While in Initialization Mode, all message transfers to and from the CAN bus are stopped 
+    // and the status of the CAN bus output CANTX is recessive (high).
+    // Entering Initialization Mode does not change any of the configuration registers.
+    // To initialize the CAN Controller, software has to set up the Bit Timing (CAN_BTR) 
+    // and CAN options (CAN_MCR) registers. To initialize the registers associated with the CAN filter banks 
+    // (mode, scale, FIFO assignment, activation and filter values), software has to set the FINIT bit (CAN_FMR). 
+    // Filter initialization also can be done outside the initialization mode.
+    pub fn open(&self, is: &CanInit) -> bool {
+        let mut wait = 0;
+
+        /* Remove from sleep mode and place into initialization mode */
+        pointer::clr_ptr_vol_bit_u32(self.mcr, SLRQ_BIT);
+        pointer::set_ptr_vol_bit_u32(self.mcr, INRQ_BIT);
+
+        while !pointer::get_ptr_vol_bit_u32(self.msr, INAK_BIT) { // Wait for initialization mode
+            if wait > TIMEOUT {
+                return false;
+            }
+            wait+=1;
+        }
+
+        /* 0: Priority driven by the identifier of the message, 1: Priority driven by the request order (chronologically) */
+        match is.txfp { 
+            true    => pointer::set_ptr_vol_bit_u32(self.mcr, TXFP_BIT),
+            false   => pointer::clr_ptr_vol_bit_u32(self.mcr, TXFP_BIT)
+        }
+
+        /* 0: Receive FIFO not locked on overrun. Once a receive FIFO is full the next incoming message will overwrite the previous one 1: Receive FIFO locked against overrun. Once a receive FIFO is full the next incoming message will be discarded */
+        match is.rflm { 
+            true    => pointer::set_ptr_vol_bit_u32(self.mcr, RFLM_BIT),
+            false   => pointer::clr_ptr_vol_bit_u32(self.mcr, RFLM_BIT)
+        }
+
+        /* 0: The CAN hardware will automatically retransmit the message until it has been successfully transmitted according to the CAN standard 1: A message will be transmitted only once, independently of the transmission result (successful, error or arbitration lost) */
+        match is.nart { 
+            true    => pointer::set_ptr_vol_bit_u32(self.mcr, NART_BIT),
+            false   => pointer::clr_ptr_vol_bit_u32(self.mcr, NART_BIT)
+        }
+
+        /* 0: The Sleep mode is left on software request by clearing the SLEEP bit of the CAN_MCR register 1: The Sleep mode is left automatically by hardware on CAN message detection.The SLEEP bit of the CAN_MCR register and the SLAK bit of the CAN_MSR register are cleared by hardware */
+        match is.awum { 
+            true    => pointer::set_ptr_vol_bit_u32(self.mcr, AWUM_BIT),
+            false   => pointer::clr_ptr_vol_bit_u32(self.mcr, AWUM_BIT)
+        }
+
+        /* 0: The Bus-Off state is left on software request, once 128 occurrences of 11 recessive bits have been monitored and the software has first set and cleared the INRQ bit of the CAN_MCR register 1: The Bus-Off state is left automatically by hardware once 128 occurrences of 11 recessive bits have been monitored */
+        match is.abom { 
+            true    => pointer::set_ptr_vol_bit_u32(self.mcr, ABOM_BIT),
+            false   => pointer::clr_ptr_vol_bit_u32(self.mcr, ABOM_BIT)
+        }
+
+        /* 0: Time Triggered Communication mode disabled 1: Time Triggered Communication mode enabled */
+        match is.ttcm { 
+            true    => pointer::set_ptr_vol_bit_u32(self.mcr, TTCM_BIT),
+            false   => pointer::clr_ptr_vol_bit_u32(self.mcr, TTCM_BIT)
+        }
+
+        self.clock_setup(is);
+
+        pointer::clr_ptr_vol_bit_u32(self.mcr, INRQ_BIT);
+
+        wait = 0;
+
+        while pointer::get_ptr_vol_bit_u32(self.msr, INAK_BIT) { // Wait for initialization mode
+            if wait > TIMEOUT {
+                return false;
+            }
+            wait+=1;
+        }
+
+        return true;
+    }
+
+    /* Reception Handling */
+    // For the reception of CAN messages, three mailboxes organized as a FIFO are provided. 
+    // In order to save CPU load, simplify the software and guarantee data consistency, the FIFO is managed completely by hardware. 
+    // The application accesses the messages stored in the FIFO through the FIFO output mailbox
+    pub fn read(&self) -> usize {
+
+    }
+
+    /* Transmission Handling */
+    // In order to transmit a message, 
+    //      The application must select one empty transmit mailbox, 
+    //      Set up the identifier, 
+    //      The data length code (DLC) and 
+    //      The data 
+    // before requesting the transmission by setting the corresponding TXRQ bit in the CAN_TIxR register. 
+    // Once the mailbox has left empty state, the software no longer has write access to the mailbox registers. 
+    // Immediately after the TXRQ bit has been set, the mailbox enters pending state and waits to become the highest priority mailbox, 
+    //      see Transmit Priority. 
+    // As soon as the mailbox has the highest priority it will be scheduled for transmission. 
+    // The transmission of the message of the scheduled mailbox will start (enter transmit state) when the CAN bus becomes idle. 
+    // Once the mailbox has been successfully transmitted, it will become empty again. 
+    // The hardware indicates a successful transmission by setting the RQCP and TXOK bits in the CAN_TSR register. 
+    // If the transmission fails, the cause is indicated by the ALST bit in the CAN_TSR register in case of an Arbitration Lost, and/or the TERR bit, 
+    // in case of transmission error detection.
+    pub fn write(&self) -> bool {
+        let tm;             // Transmit Mail Box Available
+        
+        if pointer::get_ptr_vol_bit_u32(self.tsr, TME0_BIT) {           // Check if the first mailbox is empty
+            tm = 0;
+        } else if pointer::get_ptr_vol_bit_u32(self.tsr, TME1_BIT) {    // Check if the second mailbox is empty
+            tm = 1;
+        } else if pointer::get_ptr_vol_bit_u32(self.tsr, TME2_BIT) {    // Check if the third mailbox is empty
+            tm = 2;
+        } else {                                                        // No mailbox found return
+            return false;
+        }
+        
+        return true;
+    }
+
+    /* Baud Rate Calc */
+    // Baud Rate = 1 / NominalBitTime
+    // NominalBitTime = 1 * tq + tbs1 + tbs2
+    // tbs1 = tq * (TS1[3:0] + 1),
+    // tbs2 = tq * (TS2[2:0] + 1),
+    // tq = (BRP[9:0] + 1) * tpclk
+    // tpclk = time period of the APB Clock
+    // CURRENTLY USING http://www.bittiming.can-wiki.info/
+    /* Example Table */
+    /* 16 Mhz 
+    Bit     accuracy    Pre-        TQ      TS1     TS2     Acc     Reg
+    Rate                scaler 			
+    1000	0.0000	    1	        16	    13	    2	    87.5	0x001c0000
+    500	    0.0000	    2	        16	    13	    2	    87.5	0x001c0001
+    250	    0.0000	    4	        16	    13	    2	    87.5	0x001c0003
+    125	    0.0000	    8	        16	    13	    2	    87.5	0x001c0007
+    */
+
+    fn clock_setup(&self, is: &CanInit) {
+        /* Due to the + 1 in all calcs we remove 1 from all */
+        pointer::set_ptr_vol_u32(self.btr, BRP_OFFSET, BRP_MASK, is.brp);
+        pointer::set_ptr_vol_u32(self.btr, TS1_OFFSET, TS1_MASK, is.ts1);
+        pointer::set_ptr_vol_u32(self.btr, TS2_OFFSET, TS2_MASK, is.ts2);
+        pointer::set_ptr_vol_u32(self.btr, SJW_OFFSET, SJW_MASK, is.sjw);
     }
 }

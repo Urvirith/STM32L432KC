@@ -88,6 +88,15 @@ pub struct CanInit {
     sjw:        u32         // Resynchronization Jump Width
 }
 
+/* Message Struct */
+pub struct CanMsg {
+    id:         u32,        // Standard Identifier Or Extended Identifier
+    ide:        bool,       // This Bit Defines The Identifier Type Of Message In The Mailbox 0: Standard Identifier 1: Extended Identifier.
+    rtr:        bool,       // Remote Transmission Request 0: Data Frame 1: Remote Frame
+    dlc:        u32,        // Data Length Code
+    data:       [u8; 8]     // Data Bytes 0 - 7
+}
+
 /* Enumerations */
 /* Baud Rates */
 pub enum BaudRate {Baud125kB, Baud250kB, Baud500kB, Baud1MB}
@@ -104,12 +113,18 @@ pub fn baud(br: BaudRate) -> u32 {
 /* Register Masks */
 const TIMEOUT:          u32 = 0x0000FFFF;
 
-
 /* BTR */
 const BRP_MASK:         u32 = common::MASK_9_BIT;
 const TS1_MASK:         u32 = common::MASK_4_BIT;
 const TS2_MASK:         u32 = common::MASK_3_BIT;
 const SJW_MASK:         u32 = common::MASK_2_BIT;
+
+/* TIxR or RIxR */
+const STID_MASK:        u32 = common::MASK_11_BIT;
+const EXID_MASK:        u32 = common::MASK_29_BIT;
+
+/* TDTxR or RDTxR */
+const DLC_MASK:         u32 = common::MASK_4_BIT;
 
 /* Register Bits */
 /* MCR */
@@ -135,12 +150,24 @@ const TME0_BIT:         u32 = common::BIT_26;
 const TME1_BIT:         u32 = common::BIT_27;
 const TME2_BIT:         u32 = common::BIT_28;
 
+/* TIxR or RIxR */
+const TXRQ_BIT:         u32 = common::BIT_0;
+const RTR_BIT:          u32 = common::BIT_1;
+const IDE_BIT:          u32 = common::BIT_2;
+
 /* Register Offsets */
 /* BTR */
 const BRP_OFFSET:       u32 = 0;
 const TS1_OFFSET:       u32 = 16;
 const TS2_OFFSET:       u32 = 20;
 const SJW_OFFSET:       u32 = 24;
+
+/* TIxR or RIxR */
+const STID_OFFSET:      u32 = 21;
+const EXID_OFFSET:      u32 = 3;
+
+/* TDTxR or RDTxR */
+const DLC_OFFSET:       u32 = 0;
 
 impl Can {
     /* Initialize The Structure */
@@ -264,7 +291,7 @@ impl Can {
     // For the reception of CAN messages, three mailboxes organized as a FIFO are provided. 
     // In order to save CPU load, simplify the software and guarantee data consistency, the FIFO is managed completely by hardware. 
     // The application accesses the messages stored in the FIFO through the FIFO output mailbox
-    pub fn read(&self) -> usize {
+    pub fn read(&self){
 
     }
 
@@ -284,18 +311,53 @@ impl Can {
     // The hardware indicates a successful transmission by setting the RQCP and TXOK bits in the CAN_TSR register. 
     // If the transmission fails, the cause is indicated by the ALST bit in the CAN_TSR register in case of an Arbitration Lost, and/or the TERR bit, 
     // in case of transmission error detection.
-    pub fn write(&self) -> bool {
-        let tm;             // Transmit Mail Box Available
-        
+    pub fn write(&self, msg: &CanMsg) -> bool { 
+        let regl = ((msg.data[3] as u32) << 24) | ((msg.data[2] as u32) << 16) | ((msg.data[1] as u32) << 8) | ((msg.data[0] as u32) << 0);
+        let regh = ((msg.data[7] as u32) << 24) | ((msg.data[6] as u32) << 16) | ((msg.data[5] as u32) << 8) | ((msg.data[4] as u32) << 0);
+        let tir;
+        let tdt;
+        let tdl;
+        let tdh;
+
+        /* Assign Pointer To Local Variable */
         if pointer::get_ptr_vol_bit_u32(self.tsr, TME0_BIT) {           // Check if the first mailbox is empty
-            tm = 0;
+            tir = self.ti0r;
+            tdt = self.tdt0r;
+            tdl = self.tdl0r;
+            tdh = self.tdh0r;
         } else if pointer::get_ptr_vol_bit_u32(self.tsr, TME1_BIT) {    // Check if the second mailbox is empty
-            tm = 1;
+            tir = self.ti1r;
+            tdt = self.tdt1r;
+            tdl = self.tdl1r;
+            tdh = self.tdh1r;
         } else if pointer::get_ptr_vol_bit_u32(self.tsr, TME2_BIT) {    // Check if the third mailbox is empty
-            tm = 2;
+            tir = self.ti2r;
+            tdt = self.tdt2r;
+            tdl = self.tdl2r;
+            tdh = self.tdh2r;
         } else {                                                        // No mailbox found return
             return false;
         }
+
+        match msg.rtr {
+            true    => pointer::set_ptr_vol_bit_u32(tir, RTR_BIT),
+            false   => pointer::clr_ptr_vol_bit_u32(tir, RTR_BIT)
+        }
+        
+        match msg.ide {
+            true    => {
+                pointer::set_ptr_vol_bit_u32(tir, IDE_BIT);
+                pointer::set_ptr_vol_u32(tir, EXID_OFFSET, EXID_MASK, msg.id);
+            } false => {
+                pointer::clr_ptr_vol_bit_u32(tir, IDE_BIT);
+                pointer::set_ptr_vol_u32(tir, STID_OFFSET, STID_MASK, msg.id);
+            }
+        }
+        
+        pointer::set_ptr_vol_u32(tdt, DLC_OFFSET, DLC_MASK, msg.dlc);
+        pointer::set_ptr_vol_raw_u32(tdl, regl);
+        pointer::set_ptr_vol_raw_u32(tdh, regh);
+        pointer::set_ptr_vol_bit_u32(tir, TXRQ_BIT);
         
         return true;
     }

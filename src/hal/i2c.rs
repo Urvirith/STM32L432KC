@@ -350,31 +350,12 @@ impl I2c {
         return true;
     }
 
-    pub fn std_write(&self, slave_addr: u32, addr_10bit: bool, req_10bit: bool, buf: &[u8]) -> u8 {
+    pub fn std_write(&self, slave_addr: u32, addr_10bit: bool, req_10bit: bool, buf: &[u8]) {
         self.setup(slave_addr, addr_10bit, req_10bit, buf.len() as u32, WRITE);
-        let start = self.start();
-        let write = self.write(buf);
-        let tc = self.tc();
-        let stop = self.stop();
-
-        let mut val = 0;
-        if !start {
-            val += 1;
-        }
-
-        //if !write {
-        //    val += 2;
-        //}
-
-        if !tc {
-            val += 4;
-        }
-
-        if !stop {
-            val += 8;
-        }
-
-        return val;       // CAN BE USED LATER FOR ALARMING OR TURN TO VOID
+        self.start();
+        self.write(buf);
+        self.tc();
+        self.stop();
     }
 
     // PG. 1522-1523 (MATH TREE)

@@ -94,12 +94,15 @@ pub struct CanMsg {
     ide:        bool,       // This Bit Defines The Identifier Type Of Message In The Mailbox 0: Standard Identifier 1: Extended Identifier.
     rtr:        bool,       // Remote Transmission Request 0: Data Frame 1: Remote Frame
     dlc:        u32,        // Data Length Code
+    fmi:        u32,        // Filter Match Index
     data:       [u8; 8]     // Data Bytes 0 - 7
 }
 
 /* Enumerations */
 /* Baud Rates */
 pub enum BaudRate {Baud125kB, Baud250kB, Baud500kB, Baud1MB}
+
+pub enum FifoReg {Fifo0, Fifo1}
 
 pub fn baud(br: BaudRate) -> u32 {
     return match br {
@@ -119,12 +122,19 @@ const TS1_MASK:         u32 = common::MASK_4_BIT;
 const TS2_MASK:         u32 = common::MASK_3_BIT;
 const SJW_MASK:         u32 = common::MASK_2_BIT;
 
+/* RFxR */
+const FMP_MASK:         u32 = common::MASK_2_BIT;
+
 /* TIxR or RIxR */
 const STID_MASK:        u32 = common::MASK_11_BIT;
 const EXID_MASK:        u32 = common::MASK_29_BIT;
 
 /* TDTxR or RDTxR */
 const DLC_MASK:         u32 = common::MASK_4_BIT;
+const FMI_MASK:         u32 = common::MASK_8_BIT;
+
+/* DLR & DHR */
+const DATA_MASK:        u32 = common::MASK_8_BIT;
 
 /* Register Bits */
 /* MCR */
@@ -150,6 +160,9 @@ const TME0_BIT:         u32 = common::BIT_26;
 const TME1_BIT:         u32 = common::BIT_27;
 const TME2_BIT:         u32 = common::BIT_28;
 
+/* RFxR */
+const RFOM_BIT:         u32 = common::BIT_5;
+
 /* TIxR or RIxR */
 const TXRQ_BIT:         u32 = common::BIT_0;
 const RTR_BIT:          u32 = common::BIT_1;
@@ -162,12 +175,26 @@ const TS1_OFFSET:       u32 = 16;
 const TS2_OFFSET:       u32 = 20;
 const SJW_OFFSET:       u32 = 24;
 
+/* RFxR */
+const FMP_OFFSET:       u32 = 0;
+
 /* TIxR or RIxR */
 const STID_OFFSET:      u32 = 21;
 const EXID_OFFSET:      u32 = 3;
 
 /* TDTxR or RDTxR */
 const DLC_OFFSET:       u32 = 0;
+const FMI_OFFSET:       u32 = 8;
+
+/* DLR & DHR */
+const DATA_0_OFFSET:    u32 = 0;
+const DATA_1_OFFSET:    u32 = 8;
+const DATA_2_OFFSET:    u32 = 16;
+const DATA_3_OFFSET:    u32 = 24;
+const DATA_4_OFFSET:    u32 = 0;
+const DATA_5_OFFSET:    u32 = 8;
+const DATA_6_OFFSET:    u32 = 16;
+const DATA_7_OFFSET:    u32 = 24;
 
 impl Can {
     /* Initialize The Structure */
@@ -221,7 +248,7 @@ impl Can {
     // and CAN options (CAN_MCR) registers. To initialize the registers associated with the CAN filter banks 
     // (mode, scale, FIFO assignment, activation and filter values), software has to set the FINIT bit (CAN_FMR). 
     // Filter initialization also can be done outside the initialization mode.
-    pub fn open(&self, is: &CanInit) -> bool {
+    pub fn open(&self, ci: &CanInit) -> bool {
         let mut wait = 0;
 
         /* Remove from sleep mode and place into initialization mode */
@@ -236,42 +263,42 @@ impl Can {
         }
 
         /* 0: Priority driven by the identifier of the message, 1: Priority driven by the request order (chronologically) */
-        match is.txfp { 
+        match ci.txfp { 
             true    => pointer::set_ptr_vol_bit_u32(self.mcr, TXFP_BIT),
             false   => pointer::clr_ptr_vol_bit_u32(self.mcr, TXFP_BIT)
         }
 
         /* 0: Receive FIFO not locked on overrun. Once a receive FIFO is full the next incoming message will overwrite the previous one 1: Receive FIFO locked against overrun. Once a receive FIFO is full the next incoming message will be discarded */
-        match is.rflm { 
+        match ci.rflm { 
             true    => pointer::set_ptr_vol_bit_u32(self.mcr, RFLM_BIT),
             false   => pointer::clr_ptr_vol_bit_u32(self.mcr, RFLM_BIT)
         }
 
         /* 0: The CAN hardware will automatically retransmit the message until it has been successfully transmitted according to the CAN standard 1: A message will be transmitted only once, independently of the transmission result (successful, error or arbitration lost) */
-        match is.nart { 
+        match ci.nart { 
             true    => pointer::set_ptr_vol_bit_u32(self.mcr, NART_BIT),
             false   => pointer::clr_ptr_vol_bit_u32(self.mcr, NART_BIT)
         }
 
         /* 0: The Sleep mode is left on software request by clearing the SLEEP bit of the CAN_MCR register 1: The Sleep mode is left automatically by hardware on CAN message detection.The SLEEP bit of the CAN_MCR register and the SLAK bit of the CAN_MSR register are cleared by hardware */
-        match is.awum { 
+        match ci.awum { 
             true    => pointer::set_ptr_vol_bit_u32(self.mcr, AWUM_BIT),
             false   => pointer::clr_ptr_vol_bit_u32(self.mcr, AWUM_BIT)
         }
 
         /* 0: The Bus-Off state is left on software request, once 128 occurrences of 11 recessive bits have been monitored and the software has first set and cleared the INRQ bit of the CAN_MCR register 1: The Bus-Off state is left automatically by hardware once 128 occurrences of 11 recessive bits have been monitored */
-        match is.abom { 
+        match ci.abom { 
             true    => pointer::set_ptr_vol_bit_u32(self.mcr, ABOM_BIT),
             false   => pointer::clr_ptr_vol_bit_u32(self.mcr, ABOM_BIT)
         }
 
         /* 0: Time Triggered Communication mode disabled 1: Time Triggered Communication mode enabled */
-        match is.ttcm { 
+        match ci.ttcm { 
             true    => pointer::set_ptr_vol_bit_u32(self.mcr, TTCM_BIT),
             false   => pointer::clr_ptr_vol_bit_u32(self.mcr, TTCM_BIT)
         }
 
-        self.clock_setup(is);
+        self.clock_setup(ci);
 
         pointer::clr_ptr_vol_bit_u32(self.mcr, INRQ_BIT);
 
@@ -288,11 +315,78 @@ impl Can {
     }
 
     /* Reception Handling */
+    // Check if either FIFO has data in it
+    pub fn read_pend(&self) -> bool {
+        if pointer::get_ptr_vol_u32(self.rf0r, FMP_OFFSET, FMP_MASK) > 0 {
+            return true;
+        } else if pointer::get_ptr_vol_u32(self.rf1r, FMP_OFFSET, FMP_MASK) > 0 {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     // For the reception of CAN messages, three mailboxes organized as a FIFO are provided. 
     // In order to save CPU load, simplify the software and guarantee data consistency, the FIFO is managed completely by hardware. 
     // The application accesses the messages stored in the FIFO through the FIFO output mailbox
-    pub fn read(&self){
+    pub fn read(&self, msg: &mut CanMsg) ->  bool {
+        let regl;
+        let regh;
+        let ri;
+        let rdt;
+        let rdl;
+        let rdh;
+        let rf;
+        
+        // Assign the pointer to simplify the logic
+        if (pointer::get_ptr_vol_u32(self.rf0r, FMP_OFFSET, FMP_MASK) > pointer::get_ptr_vol_u32(self.rf1r, FMP_OFFSET, FMP_MASK)) && (pointer::get_ptr_vol_u32(self.rf0r, FMP_OFFSET, FMP_MASK) > 0) {
+            ri  = self.ri0r;
+            rdt = self.rdt0r;
+            rdl = self.rdl0r;
+            rdh = self.rdh0r;
+            rf  = self.rf0r;
+        } else if (pointer::get_ptr_vol_u32(self.rf1r, FMP_OFFSET, FMP_MASK) > pointer::get_ptr_vol_u32(self.rf0r, FMP_OFFSET, FMP_MASK)) && (pointer::get_ptr_vol_u32(self.rf1r, FMP_OFFSET, FMP_MASK) > 0) {
+            ri  = self.ri1r;
+            rdt = self.rdt1r;
+            rdl = self.rdl1r;
+            rdh = self.rdh1r;
+            rf  = self.rf1r;
+        } else {
+            return false;
+        }
 
+        msg.ide = pointer::get_ptr_vol_bit_u32(ri, IDE_BIT);
+
+        if msg.ide {
+            msg.id = pointer::get_ptr_vol_u32(ri, EXID_OFFSET, EXID_MASK);
+        } else {
+            msg.id = pointer::get_ptr_vol_u32(ri, STID_OFFSET, STID_MASK);
+        }
+
+        msg.rtr = pointer::get_ptr_vol_bit_u32(ri, RTR_BIT);
+        msg.dlc = pointer::get_ptr_vol_u32(rdt, DLC_OFFSET, DLC_MASK);
+        msg.fmi = pointer::get_ptr_vol_u32(rdt, FMI_OFFSET, FMI_MASK);
+        regl = pointer::get_ptr_vol_raw_u32(rdl);
+        regh = pointer::get_ptr_vol_raw_u32(rdh);
+        msg.data[0] = ((regl >> DATA_0_OFFSET) & DATA_MASK) as u8;
+        msg.data[1] = ((regl >> DATA_1_OFFSET) & DATA_MASK) as u8;
+        msg.data[2] = ((regl >> DATA_2_OFFSET) & DATA_MASK) as u8;
+        msg.data[3] = ((regl >> DATA_3_OFFSET) & DATA_MASK) as u8;
+        msg.data[4] = ((regh >> DATA_4_OFFSET) & DATA_MASK) as u8;
+        msg.data[5] = ((regh >> DATA_5_OFFSET) & DATA_MASK) as u8;
+        msg.data[6] = ((regh >> DATA_6_OFFSET) & DATA_MASK) as u8;
+        msg.data[7] = ((regh >> DATA_7_OFFSET) & DATA_MASK) as u8;
+
+        pointer::set_ptr_vol_bit_u32(rf, RFOM_BIT);
+
+        return true;
+    }
+
+    pub fn fifo_release(&self, fifo: FifoReg) {
+        match fifo {
+            FifoReg::Fifo0 => pointer::set_ptr_vol_bit_u32(self.rf0r, RFOM_BIT),
+            FifoReg::Fifo1 => pointer::set_ptr_vol_bit_u32(self.rf1r, RFOM_BIT)
+        }
     }
 
     /* Transmission Handling */
@@ -312,26 +406,26 @@ impl Can {
     // If the transmission fails, the cause is indicated by the ALST bit in the CAN_TSR register in case of an Arbitration Lost, and/or the TERR bit, 
     // in case of transmission error detection.
     pub fn write(&self, msg: &CanMsg) -> bool { 
-        let regl = ((msg.data[3] as u32) << 24) | ((msg.data[2] as u32) << 16) | ((msg.data[1] as u32) << 8) | ((msg.data[0] as u32) << 0);
-        let regh = ((msg.data[7] as u32) << 24) | ((msg.data[6] as u32) << 16) | ((msg.data[5] as u32) << 8) | ((msg.data[4] as u32) << 0);
-        let tir;
+        let regl = ((msg.data[3] as u32) << DATA_3_OFFSET) | ((msg.data[2] as u32) << DATA_2_OFFSET) | ((msg.data[1] as u32) << DATA_1_OFFSET) | ((msg.data[0] as u32) << DATA_0_OFFSET);
+        let regh = ((msg.data[7] as u32) << DATA_7_OFFSET) | ((msg.data[6] as u32) << DATA_6_OFFSET) | ((msg.data[5] as u32) << DATA_5_OFFSET) | ((msg.data[4] as u32) << DATA_4_OFFSET);
+        let ti;
         let tdt;
         let tdl;
         let tdh;
 
         /* Assign Pointer To Local Variable */
         if pointer::get_ptr_vol_bit_u32(self.tsr, TME0_BIT) {           // Check if the first mailbox is empty
-            tir = self.ti0r;
+            ti  = self.ti0r;
             tdt = self.tdt0r;
             tdl = self.tdl0r;
             tdh = self.tdh0r;
         } else if pointer::get_ptr_vol_bit_u32(self.tsr, TME1_BIT) {    // Check if the second mailbox is empty
-            tir = self.ti1r;
+            ti  = self.ti1r;
             tdt = self.tdt1r;
             tdl = self.tdl1r;
             tdh = self.tdh1r;
         } else if pointer::get_ptr_vol_bit_u32(self.tsr, TME2_BIT) {    // Check if the third mailbox is empty
-            tir = self.ti2r;
+            ti  = self.ti2r;
             tdt = self.tdt2r;
             tdl = self.tdl2r;
             tdh = self.tdh2r;
@@ -340,24 +434,24 @@ impl Can {
         }
 
         match msg.rtr {
-            true    => pointer::set_ptr_vol_bit_u32(tir, RTR_BIT),
-            false   => pointer::clr_ptr_vol_bit_u32(tir, RTR_BIT)
+            true    => pointer::set_ptr_vol_bit_u32(ti, RTR_BIT),
+            false   => pointer::clr_ptr_vol_bit_u32(ti, RTR_BIT)
         }
         
         match msg.ide {
             true    => {
-                pointer::set_ptr_vol_bit_u32(tir, IDE_BIT);
-                pointer::set_ptr_vol_u32(tir, EXID_OFFSET, EXID_MASK, msg.id);
+                pointer::set_ptr_vol_bit_u32(ti, IDE_BIT);
+                pointer::set_ptr_vol_u32(ti, EXID_OFFSET, EXID_MASK, msg.id);
             } false => {
-                pointer::clr_ptr_vol_bit_u32(tir, IDE_BIT);
-                pointer::set_ptr_vol_u32(tir, STID_OFFSET, STID_MASK, msg.id);
+                pointer::clr_ptr_vol_bit_u32(ti, IDE_BIT);
+                pointer::set_ptr_vol_u32(ti, STID_OFFSET, STID_MASK, msg.id);
             }
         }
         
         pointer::set_ptr_vol_u32(tdt, DLC_OFFSET, DLC_MASK, msg.dlc);
         pointer::set_ptr_vol_raw_u32(tdl, regl);
         pointer::set_ptr_vol_raw_u32(tdh, regh);
-        pointer::set_ptr_vol_bit_u32(tir, TXRQ_BIT);
+        pointer::set_ptr_vol_bit_u32(ti, TXRQ_BIT);
         
         return true;
     }
@@ -380,11 +474,24 @@ impl Can {
     125	    0.0000	    8	        16	    13	    2	    87.5	0x001c0007
     */
 
-    fn clock_setup(&self, is: &CanInit) {
+    fn clock_setup(&self, ci: &CanInit) {
         /* Due to the + 1 in all calcs we remove 1 from all */
-        pointer::set_ptr_vol_u32(self.btr, BRP_OFFSET, BRP_MASK, is.brp);
-        pointer::set_ptr_vol_u32(self.btr, TS1_OFFSET, TS1_MASK, is.ts1);
-        pointer::set_ptr_vol_u32(self.btr, TS2_OFFSET, TS2_MASK, is.ts2);
-        pointer::set_ptr_vol_u32(self.btr, SJW_OFFSET, SJW_MASK, is.sjw);
+        pointer::set_ptr_vol_u32(self.btr, BRP_OFFSET, BRP_MASK, ci.brp);
+        pointer::set_ptr_vol_u32(self.btr, TS1_OFFSET, TS1_MASK, ci.ts1);
+        pointer::set_ptr_vol_u32(self.btr, TS2_OFFSET, TS2_MASK, ci.ts2);
+        pointer::set_ptr_vol_u32(self.btr, SJW_OFFSET, SJW_MASK, ci.sjw);
+    }
+}
+
+impl CanMsg {
+    pub fn init() -> CanMsg {
+        return CanMsg {
+            id:         0, 
+            ide:        false,
+            rtr:        false,
+            dlc:        0,
+            fmi:        0,
+            data:       [0; 8]
+        };
     }
 }

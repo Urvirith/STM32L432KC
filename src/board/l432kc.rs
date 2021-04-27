@@ -32,6 +32,9 @@ pub const I2C3_BASE:                u32 = 0x40005C00;
 pub const SPI1_BASE:                u32 = 0x40013000; 
 //pub const SPI2_BASE:                u32 = 0x40003800; Does not exist in the 432KC
 pub const SPI3_BASE:                u32 = 0x40003C00;
+
+/* Serial Peripheral Interface */
+pub const CAN_BASE:                 u32 = 0x40006400; 
       
 /* Reset and Clock Control (RCC) */
 pub const GPIOA_RCC_AHB2_ENABLE:    u32 = common::BIT_0;
@@ -52,14 +55,18 @@ pub const USART2_TX:                u32 = PORTA_PIN2;
 pub const USART2_RX:                u32 = PORTA_PIN3;
 
 /* I2C 1*/
-/* RCC */
 pub const I2C1_RCC_APB1R1_ENABLE:   u32 = common::BIT_21;
-
-/* PINS */
 pub const PORTB_PIN6:               u32 = 6;    //D5    SCL
 pub const PORTB_PIN7:               u32 = 7;    //D4    SDA
 pub const I2C1_SCL:                 u32 = PORTB_PIN6;
 pub const I2C1_SDA:                 u32 = PORTB_PIN7;
+
+/* CAN */
+pub const CAN_RCC_APB1R1_ENABLE:    u32 = common::BIT_25;
+pub const PORTA_PIN11:              u32 = 11;   //D10   RX
+pub const PORTA_PIN12:              u32 = 12;   //D2    TX
+pub const CAN_RX:                   u32 = PORTA_PIN11;
+pub const CAN_TX:                   u32 = PORTA_PIN12;
 
 /* SPI 1*/
 /* RCC */

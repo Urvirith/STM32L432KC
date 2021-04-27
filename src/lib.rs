@@ -19,6 +19,7 @@ pub extern fn sys_init() {
     rcc.write_ahb2_enr(board::l432kc::GPIOB_RCC_AHB2_ENABLE);
     rcc.write_apb1_enr1(board::l432kc::TIMER2_RCC_APB1R1_ENABLE);
     rcc.write_apb1_enr1(board::l432kc::USART2_RCC_APB1R1_ENABLE);
+    rcc.write_apb1_enr1(board::l432kc::CAN_RCC_APB1R1_ENABLE)
 }
 
 #[no_mangle]
@@ -28,11 +29,20 @@ pub extern fn start() {
     let gpioa = hal::gpio::Gpio::init(board::l432kc::GPIOA_BASE);  
     let gpiob = hal::gpio::Gpio::init(board::l432kc::GPIOB_BASE);
     let usart = hal::usart::Usart::init(board::l432kc::USART2_BASE);
+    let can = hal::can::Can::init(board::l432kc::CAN_BASE);
     let seq_timer = hal::timer::Timer::init(board::l432kc::TIMER2_BASE);
 
     /* USART Setup */
     gpioa.otype(board::l432kc::USART2_TX, hal::gpio::Mode::Alt, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af7);
     gpioa.otype(board::l432kc::USART2_RX, hal::gpio::Mode::Alt, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af7);
+
+    /* CAN Setup */
+    gpioa.otype(board::l432kc::CAN_TX, hal::gpio::Mode::Alt, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af9);
+    gpioa.otype(board::l432kc::CAN_RX, hal::gpio::Mode::Alt, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af9);
+    gpioa.ospeed(board::l432kc::CAN_TX, hal::gpio::OSpeed::Medium);
+    gpioa.ospeed(board::l432kc::CAN_RX, hal::gpio::OSpeed::Medium);
+    gpiob.pupd(board::l432kc::CAN_TX, hal::gpio::Pupd::Pu);
+    gpiob.pupd(board::l432kc::CAN_RX, hal::gpio::Pupd::Pu);
 
     /* LED */
     gpiob.otype(board::l432kc::USER_LED, hal::gpio::Mode::Out, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af0);
@@ -42,6 +52,8 @@ pub extern fn start() {
     seq_timer.start();
 
     usart.open(hal::usart::WordLen::Bits8, hal::usart::StopLen::StopBit1, hal::usart::BaudRate::Baud9600, freq, hal::usart::OverSample::Oversample16);
+    let ci = hal::can::CanInit::init();
+    can.open(&ci);
 
     let mut i = false;
 

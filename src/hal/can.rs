@@ -456,6 +456,11 @@ impl Can {
         return true;
     }
 
+    /* TO-DO */
+    pub fn write_sts(&self) {
+
+    }
+
     /* Baud Rate Calc */
     // Baud Rate = 1 / NominalBitTime
     // NominalBitTime = 1 * tq + tbs1 + tbs2
@@ -493,5 +498,22 @@ impl CanMsg {
             fmi:        0,
             data:       [0; 8]
         };
+    }
+}
+
+impl CanInit {
+    pub fn init() -> CanInit {
+        return CanInit {
+            txfp:       false,      // Transmit FIFO Priority
+            rflm:       false,      // Receive FIFO Locked mode
+            nart:       false,      // No Automatic Retransmission
+            awum:       false,      // Automatic Wakeup Mode
+            abom:       false,      // Automatic Bus-off Management
+            ttcm:       false,
+            brp:        0,          // Baud Rate Prescaler
+            ts1:        12,         // Time Segment 1
+            ts2:        2,          // Time Segment 2
+            sjw:        1           // Resynchronization Jump Width
+        }
     }
 }

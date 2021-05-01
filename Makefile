@@ -59,3 +59,6 @@ clean:
 # Flash the board us st-flash utility
 flash:
 	st-flash write $(BLD_DIR)main.bin 0x08000000
+
+reset:
+	st-flash reset

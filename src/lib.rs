@@ -55,10 +55,14 @@ pub extern fn start() {
     let ci = hal::can::CanInit::init();
     can.open(&ci);
 
+    let dogmeat = [0x44, 0x6F, 0x67, 0x6D, 0x65, 0x61, 0x74, 0x0D];
+
     let mut i = false;
 
     loop {
         if seq_timer.get_flag() {
+            usart.write(&dogmeat);
+
             if i {
                 gpiob.set_pin(board::l432kc::USER_LED_BIT);
                 i = false;

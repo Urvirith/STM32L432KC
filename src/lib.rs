@@ -33,35 +33,64 @@ pub extern fn start() {
     let seq_timer = hal::timer::Timer::init(board::l432kc::TIMER2_BASE);
 
     /* USART Setup */
-    gpioa.otype(board::l432kc::USART2_TX, hal::gpio::Mode::Alt, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af7);
-    gpioa.otype(board::l432kc::USART2_RX, hal::gpio::Mode::Alt, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af7);
+    gpioa.otype(board::l432kc::USART2_TX, board::l432kc::USART_MODE, board::l432kc::USART_OTYPE, board::l432kc::USART_AF);
+    gpioa.otype(board::l432kc::USART2_RX, board::l432kc::USART_MODE, board::l432kc::USART_OTYPE, board::l432kc::USART_AF);
 
     /* CAN Setup */
-    gpioa.otype(board::l432kc::CAN_TX, hal::gpio::Mode::Alt, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af9);
-    gpioa.otype(board::l432kc::CAN_RX, hal::gpio::Mode::Alt, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af9);
-    gpioa.ospeed(board::l432kc::CAN_TX, hal::gpio::OSpeed::Medium);
-    gpioa.ospeed(board::l432kc::CAN_RX, hal::gpio::OSpeed::Medium);
-    gpiob.pupd(board::l432kc::CAN_TX, hal::gpio::Pupd::Pu);
-    gpiob.pupd(board::l432kc::CAN_RX, hal::gpio::Pupd::Pu);
+    gpioa.otype(board::l432kc::CAN_TX, board::l432kc::CAN_MODE, board::l432kc::CAN_OTYPE, board::l432kc::CAN_AF);
+    gpioa.otype(board::l432kc::CAN_RX, board::l432kc::CAN_MODE, board::l432kc::CAN_OTYPE, board::l432kc::CAN_AF);
+    gpioa.ospeed(board::l432kc::CAN_TX, board::l432kc::CAN_OSPEED);
+    gpioa.ospeed(board::l432kc::CAN_RX, board::l432kc::CAN_OSPEED);
+    gpioa.pupd(board::l432kc::CAN_TX, board::l432kc::CAN_PUPD);
+    gpioa.pupd(board::l432kc::CAN_RX, board::l432kc::CAN_PUPD);
 
     /* LED */
-    gpiob.otype(board::l432kc::USER_LED, hal::gpio::Mode::Out, hal::gpio::OType::PushPull, hal::gpio::AltFunc::Af0);
+    gpiob.otype(board::l432kc::USER_LED, board::l432kc::USER_LED_MODE, board::l432kc::USER_LED_OTYPE, board::l432kc::USER_LED_AF);
 
     seq_timer.open(hal::timer::TimerType::Cont, hal::timer::Direction::Upcount);
-    seq_timer.set_scaling(500, freq, 1500);
+    seq_timer.set_scl(500, freq, 1500);
     seq_timer.start();
 
     usart.open(hal::usart::WordLen::Bits8, hal::usart::StopLen::StopBit1, hal::usart::BaudRate::Baud9600, freq, hal::usart::OverSample::Oversample16);
     let ci = hal::can::CanInit::init();
-    can.open(&ci);
+    let result = can.open(&ci);
 
-    let dogmeat = [0x44, 0x6F, 0x67, 0x6D, 0x65, 0x61, 0x74, 0x0D];
+    //let dogmeat = [0x44, 0x6F, 0x67, 0x6D, 0x65, 0x61, 0x74, 0x0D];
+
+    let mut msg = hal::can::CanMsg::init();
+    msg.set_dlc(2);
+    msg.set_data([1, 0, 0, 0, 0, 0, 0 ,0]); // Transition to operational
+
+    if result == true { // CHECK IF INQR IS GOOD
+        usart.write(&[0x44, 0x00, 0x01, 0x0D]);
+    } else {
+        usart.write(&[0x44, 0x00, 0x00, 0x0D]);
+    }
+
+    let result = can.write(&msg);
+
+    if result == true { // CHECK IF INQR IS GOOD
+        usart.write(&[0x44, 0x01, 0x01, 0x0D]);
+    } else {
+        usart.write(&[0x44, 0x01, 0x00, 0x0D]);
+    }
+
+    let result = can.read_esr();
+    usart.write(&[0x44, 0x02, result as u8, 0x0D]);
+
+
+    let result = can.read_msr();
+    usart.write(&[0x44, 0x03, result as u8, (result >> 8) as u8, 0x0D]);
 
     let mut i = false;
 
     loop {
         if seq_timer.get_flag() {
-            usart.write(&dogmeat);
+            let result = can.read_esr();
+            usart.write(&[0x44, 0x02, result as u8, 0x0D]);
+                
+            let result = can.read_msr();
+            usart.write(&[0x44, 0x03, result as u8, (result >> 8) as u8, 0x0D]);
 
             if i {
                 gpiob.set_pin(board::l432kc::USER_LED_BIT);
@@ -70,7 +99,6 @@ pub extern fn start() {
                 gpiob.clr_pin(board::l432kc::USER_LED_BIT);
                 i = true;
             }
-            //usart.write(&dogmeat);
             seq_timer.clr_flag();
         }
 	}

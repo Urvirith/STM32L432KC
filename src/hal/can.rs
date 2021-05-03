@@ -382,6 +382,14 @@ impl Can {
         return true;
     }
 
+    pub fn read_esr(&self) -> u32 {
+        return pointer::get_ptr_vol_raw_u32(self.esr);
+    }
+
+    pub fn read_msr(&self) -> u32 {
+        return pointer::get_ptr_vol_raw_u32(self.msr);
+    }
+
     pub fn fifo_release(&self, fifo: FifoReg) {
         match fifo {
             FifoReg::Fifo0 => pointer::set_ptr_vol_bit_u32(self.rf0r, RFOM_BIT),
@@ -499,6 +507,23 @@ impl CanMsg {
             data:       [0; 8]
         };
     }
+
+    pub fn set_id(&mut self, id: u32, ide: bool) {
+        self.id = id;
+        self.ide = ide;
+    }
+
+    pub fn set_rtr(&mut self, rtr: bool) {
+        self.rtr = rtr;
+    }
+
+    pub fn set_dlc(&mut self, dlc: u32) {
+        self.dlc = dlc;
+    }
+
+    pub fn set_data(&mut self, data: [u8; 8]) {
+        self.data = data;
+    }
 }
 
 impl CanInit {
@@ -508,12 +533,13 @@ impl CanInit {
             rflm:       false,      // Receive FIFO Locked mode
             nart:       false,      // No Automatic Retransmission
             awum:       false,      // Automatic Wakeup Mode
-            abom:       false,      // Automatic Bus-off Management
+            abom:       true,       // Automatic Bus-off Management
             ttcm:       false,
-            brp:        0,          // Baud Rate Prescaler
+            // ALL OF THESE ARE + 1 within BTR, so from http://www.bittiming.can-wiki.info/ take all and - 1
+            brp:        1,          // Baud Rate Prescaler
             ts1:        12,         // Time Segment 1
-            ts2:        2,          // Time Segment 2
-            sjw:        1           // Resynchronization Jump Width
+            ts2:        1,          // Time Segment 2
+            sjw:        0           // Resynchronization Jump Width
         }
     }
 }

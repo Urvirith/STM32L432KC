@@ -1,4 +1,4 @@
-use crate::hal::common;
+use crate::hal::{common, gpio, usart};
 
 /* Register Base */
 /* Reset and Clock Control (RCC) */
@@ -44,6 +44,11 @@ pub const GPIOB_RCC_AHB2_ENABLE:    u32 = common::BIT_1;
 pub const USER_LED:                 u32 = 3;
 pub const USER_LED_BIT:             u32 = common::BIT_3;
 
+/* GPIO SETUP */
+pub const USER_LED_MODE:            gpio::Mode = gpio::Mode::Out;
+pub const USER_LED_OTYPE:           gpio::OType = gpio::OType::PushPull;
+pub const USER_LED_AF:              gpio::AltFunc = gpio::AltFunc::Af0;
+
 /* Timer */
 pub const TIMER2_RCC_APB1R1_ENABLE: u32 = common::BIT_0;
 
@@ -53,6 +58,11 @@ pub const PORTA_PIN2:               u32 = 2;    //A7    TX
 pub const PORTA_PIN3:               u32 = 3;    //A2    RX
 pub const USART2_TX:                u32 = PORTA_PIN2;
 pub const USART2_RX:                u32 = PORTA_PIN3;
+
+/* GPIO SETUP */
+pub const USART_MODE:               gpio::Mode = gpio::Mode::Alt;
+pub const USART_OTYPE:              gpio::OType = gpio::OType::PushPull;
+pub const USART_AF:                 gpio::AltFunc = gpio::AltFunc::Af7;
 
 /* I2C 1*/
 pub const I2C1_RCC_APB1R1_ENABLE:   u32 = common::BIT_21;
@@ -67,6 +77,13 @@ pub const PORTA_PIN11:              u32 = 11;   //D10   RX
 pub const PORTA_PIN12:              u32 = 12;   //D2    TX
 pub const CAN_RX:                   u32 = PORTA_PIN11;
 pub const CAN_TX:                   u32 = PORTA_PIN12;
+
+/* GPIO SETUP */
+pub const CAN_MODE:                 gpio::Mode = gpio::Mode::Alt;
+pub const CAN_OTYPE:                gpio::OType = gpio::OType::PushPull;
+pub const CAN_AF:                   gpio::AltFunc = gpio::AltFunc::Af9;
+pub const CAN_OSPEED:               gpio::OSpeed = gpio::OSpeed::High;
+pub const CAN_PUPD:                 gpio::Pupd = gpio::Pupd::Pu;
 
 /* SPI 1*/
 /* RCC */

@@ -157,7 +157,7 @@ impl Timer {
     }
     
     /* Set Time and Scaling Of The Timer */
-    pub fn set_scaling(&self, time: u32, clock_speed: u32, prescl: u32) {  
+    pub fn set_scl(&self, time: u32, clock_speed: u32, prescl: u32) {  
         let val;
         
         if prescl == 0 {

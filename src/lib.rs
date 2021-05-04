@@ -48,7 +48,7 @@ pub extern fn start() {
     gpiob.otype(board::l432kc::USER_LED, board::l432kc::USER_LED_MODE, board::l432kc::USER_LED_OTYPE, board::l432kc::USER_LED_AF);
 
     seq_timer.open(hal::timer::TimerType::Cont, hal::timer::Direction::Upcount);
-    seq_timer.set_scl(500, freq, 1500);
+    seq_timer.set_scl(50, freq, 1500);
     seq_timer.start();
 
     usart.open(hal::usart::WordLen::Bits8, hal::usart::StopLen::StopBit1, hal::usart::BaudRate::Baud9600, freq, hal::usart::OverSample::Oversample16);
@@ -69,28 +69,45 @@ pub extern fn start() {
 
     let result = can.write(&msg);
 
-    if result == true { // CHECK IF INQR IS GOOD
+    if result == true { // CHECK IF WRITE IS GOOD
         usart.write(&[0x44, 0x01, 0x01, 0x0D]);
     } else {
         usart.write(&[0x44, 0x01, 0x00, 0x0D]);
     }
 
+    msg.set_id(0x601, false);
+    msg.set_dlc(5);
+    msg.set_data([0x2F, 0x00, 0x62, 0x01, 0xFF, 0x00, 0x00, 0x00]);
+
+    let result = can.write(&msg);
+
+    if result == true { // CHECK IF WRITE IS GOOD
+        usart.write(&[0x44, 0x02, 0x01, 0x0D]);
+    } else {
+        usart.write(&[0x44, 0x02, 0x00, 0x0D]);
+    }
+
     let result = can.read_esr();
-    usart.write(&[0x44, 0x02, result as u8, 0x0D]);
+    usart.write(&[0x44, 0x03, result as u8, 0x0D]);
 
 
     let result = can.read_msr();
-    usart.write(&[0x44, 0x03, result as u8, (result >> 8) as u8, 0x0D]);
+    usart.write(&[0x44, 0x04, result as u8, (result >> 8) as u8, 0x0D]);
 
     let mut i = false;
+    let mut ind = 0;
 
     loop {
         if seq_timer.get_flag() {
+            if ind > 7 {
+                ind = 0;
+            }
+
             let result = can.read_esr();
-            usart.write(&[0x44, 0x02, result as u8, 0x0D]);
+            usart.write(&[0x44, 0x03, result as u8, 0x0D]);
                 
             let result = can.read_msr();
-            usart.write(&[0x44, 0x03, result as u8, (result >> 8) as u8, 0x0D]);
+            usart.write(&[0x44, 0x04, result as u8, (result >> 8) as u8, 0x0D]);
 
             if i {
                 gpiob.set_pin(board::l432kc::USER_LED_BIT);
@@ -99,6 +116,11 @@ pub extern fn start() {
                 gpiob.clr_pin(board::l432kc::USER_LED_BIT);
                 i = true;
             }
+            
+            msg.set_data([0x2F, 0x00, 0x62, 0x01, 1 << ind, 0x00, 0x00, 0x00]);
+            can.write(&msg);
+
+            ind += 1;
             seq_timer.clr_flag();
         }
 	}

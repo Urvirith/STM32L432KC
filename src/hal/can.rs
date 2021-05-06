@@ -508,6 +508,22 @@ impl CanMsg {
         };
     }
 
+    pub fn get_id(&self) -> u32 {
+        return self.id;
+    }
+
+    pub fn get_rtr(&self) -> bool {
+        return self.rtr;
+    }
+
+    pub fn get_dlc(&self) -> u32 {
+        return self.dlc;
+    }
+
+    pub fn get_data(&self) -> [u8; 8] {
+        return self.data;
+    }
+
     pub fn set_id(&mut self, id: u32, ide: bool) {
         self.id = id;
         self.ide = ide;

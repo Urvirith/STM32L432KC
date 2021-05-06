@@ -1,4 +1,4 @@
-/* CANOpen */
+/* CANOpen Master*/
 /* Standard Industrial Protocol */
 /* Uses Include - Robotics, Remote I/O, Safety I/O */
 mod sdo;

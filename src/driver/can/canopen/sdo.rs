@@ -50,7 +50,15 @@ pub struct CANOpenSdo {
 
 impl CANOpen {
     /* SDO Segment Download */
-    pub fn sdo_write(&self, cod_id: u32, node_id: u32, sdo: &CANOpenSdo, msg_data: [u8; 4] ) -> CanMsg { 
+
+    /* SDO Initiating download */
+    pub fn sdo_init_download(&self, cod_id: u32, node_id: u32, sdo: &CANOpenSdo, msg_data: [u8; 4]) {
+        let sdo = CANOpenSdo::init(Ccs::InitDl, n: N, e: E, s: S, od_ind: u16, od_sub: u8)
+    }
+
+
+
+    pub fn sdo_write(&self, cod_id: u32, node_id: u32, sdo: &CANOpenSdo, msg_data: [u8; 4]) -> CanMsg { 
         let mut msg = CanMsg::init();
         let mut data = [0; 8];
 
@@ -63,8 +71,8 @@ impl CANOpen {
         data[6] = msg_data[2];
         data[7] = msg_data[3];
 
-
         msg.set_id(cod_id + node_id, false);
+        msg.set_data(data);
         
 
         return msg;

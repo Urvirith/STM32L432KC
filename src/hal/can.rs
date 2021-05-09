@@ -529,8 +529,12 @@ impl CanMsg {
         self.ide = ide;
     }
 
-    pub fn set_rtr(&mut self, rtr: bool) {
-        self.rtr = rtr;
+    pub fn clr_rtr(&mut self) {
+        self.rtr = false;
+    }
+
+    pub fn set_rtr(&mut self) {
+        self.rtr = true;
     }
 
     pub fn set_dlc(&mut self, dlc: u32) {

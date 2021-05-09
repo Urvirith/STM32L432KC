@@ -61,7 +61,7 @@ pub extern fn start() {
     msg.set_dlc(2);
     msg.set_data([1, 0, 0, 0, 0, 0, 0 ,0]); // Transition to operational
 
-    if result == true { // CHECK IF INQR IS GOOD
+    if result { // CHECK IF INQR IS GOOD
         usart.write(&[0x44, 0x00, 0x01, 0x0D]);
     } else {
         usart.write(&[0x44, 0x00, 0x00, 0x0D]);
@@ -69,7 +69,7 @@ pub extern fn start() {
 
     let result = can.write(&msg);
 
-    if result == true { // CHECK IF WRITE IS GOOD
+    if result { // CHECK IF WRITE IS GOOD
         usart.write(&[0x44, 0x01, 0x01, 0x0D]);
     } else {
         usart.write(&[0x44, 0x01, 0x00, 0x0D]);
@@ -89,7 +89,6 @@ pub extern fn start() {
 
     let result = can.read_esr();
     usart.write(&[0x44, 0x03, result as u8, 0x0D]);
-
 
     let result = can.read_msr();
     usart.write(&[0x44, 0x04, result as u8, (result >> 8) as u8, 0x0D]);

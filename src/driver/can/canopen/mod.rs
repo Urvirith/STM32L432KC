@@ -3,16 +3,19 @@
 /* Uses Include - Robotics, Remote I/O, Safety I/O */
 /* General Functions */
 
-mod sdo;
-mod nmt;
+pub mod sdo;
+pub mod nmt;
 
+/* State Commands For CANOpen */
 const BOOTUP:           u8 = 0x00;      // Boot up (Initialising)
 const STOPPED:          u8 = 0x04;      // Stopped State
 const OPERATIONAL:      u8 = 0x05;      // Operationall State
 const PREOPERATION:     u8 = 0x7F;      // Pre-Operational State
-const UNKNOWN:          u8 = 0xFF;      // Pre-Operational State
+const UNKNOWN:          u8 = 0xFF;      // Unknown State
 
-struct CANOpen {
+/* Function Codes For CANOpen */
+
+pub struct CANOpen {
     node:   u32,            /* Internal Node Address Set By Program 1 - 127 */
     state:  CanOpenState,   /* Internal State Of The Node */
     toggle: bool            /* Internal Bit For NMT Node Guarding */

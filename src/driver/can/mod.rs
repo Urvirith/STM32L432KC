@@ -1,1 +1,1 @@
-mod canopen;
+pub mod canopen;

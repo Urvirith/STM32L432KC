@@ -4,6 +4,7 @@
 use super::{common, pointer};
 
 pub struct Can {
+    base:       u32,            // Base - Used For Filter Creation
     mcr:        *mut u32,       // Master Control Register
     msr:        *mut u32,       // Master Status Register
     tsr:        *mut u32,       // Transmit Status Register
@@ -73,6 +74,7 @@ const FM1R:     u32 = 0x0204;
 const FS1R:     u32 = 0x020C;
 const FFA1R:    u32 = 0x0214;
 const FA1R:     u32 = 0x021C;
+const FRB:      u32 = 0x0240;
 
 /* Config Struct */
 pub struct CanInit {
@@ -168,6 +170,10 @@ const TXRQ_BIT:         u32 = common::BIT_0;
 const RTR_BIT:          u32 = common::BIT_1;
 const IDE_BIT:          u32 = common::BIT_2;
 
+/* FM1R */
+const FINIT:            u32 = common::BIT_0;
+
+
 /* Register Offsets */
 /* BTR */
 const BRP_OFFSET:       u32 = 0;
@@ -196,10 +202,15 @@ const DATA_5_OFFSET:    u32 = 8;
 const DATA_6_OFFSET:    u32 = 16;
 const DATA_7_OFFSET:    u32 = 24;
 
+const FXR1:             u32 = 0x00;
+const FXR2:             u32 = 0x04;
+const FR_BASE:          u32 = 0x08;
+
 impl Can {
     /* Initialize The Structure */
     pub fn init(base: u32) -> Can {
         return Can {
+            base:       base,
             msr:        (base + MSR)        as *mut u32,
             mcr:        (base + MCR)        as *mut u32,
             tsr:        (base + TSR)        as *mut u32,
@@ -469,6 +480,38 @@ impl Can {
 
     }
 
+    pub fn filter_init(&self, filter: u32, list: bool, fifo: bool, active: bool, mask: u32) {
+        if filter > 13 {
+            return;
+        }
+
+        let bit = 1 << filter;
+        let fxr1 = (self.base + FRB + (filter * FR_BASE) + FXR1) as *mut u32;
+        let fxr2 = (self.base + FRB + (filter * FR_BASE) + FXR2) as *mut u32;
+
+        pointer::set_ptr_vol_bit_u32(self.fmr, FINIT);  // Initialization Mode For Filters
+    
+        match list {
+            true    =>      pointer::set_ptr_vol_bit_u32(self.fs1r, bit),
+            false   =>      pointer::clr_ptr_vol_bit_u32(self.fs1r, bit),
+        };
+
+        match fifo {
+            true    =>      pointer::set_ptr_vol_bit_u32(self.ffa1r, bit),
+            false   =>      pointer::clr_ptr_vol_bit_u32(self.ffa1r, bit),
+        };
+
+        match active {
+            true    =>      pointer::set_ptr_vol_bit_u32(self.fa1r, bit),
+            false   =>      pointer::clr_ptr_vol_bit_u32(self.fa1r, bit),
+        };
+
+        pointer::set_ptr_vol_raw_u32(fxr1, mask);
+        pointer::set_ptr_vol_raw_u32(fxr2, mask);
+
+        pointer::clr_ptr_vol_bit_u32(self.fmr, FINIT);  // Active Mode For Filters
+    }
+
     /* Baud Rate Calc */
     // Baud Rate = 1 / NominalBitTime
     // NominalBitTime = 1 * tq + tbs1 + tbs2
@@ -512,21 +555,13 @@ impl CanMsg {
         return self.id;
     }
 
-    pub fn get_rtr(&self) -> bool {
-        return self.rtr;
-    }
-
-    pub fn get_dlc(&self) -> u32 {
-        return self.dlc;
-    }
-
-    pub fn get_data(&self) -> [u8; 8] {
-        return self.data;
-    }
-
     pub fn set_id(&mut self, id: u32, ide: bool) {
         self.id = id;
         self.ide = ide;
+    }
+
+    pub fn get_rtr(&self) -> bool {
+        return self.rtr;
     }
 
     pub fn clr_rtr(&mut self) {
@@ -537,8 +572,16 @@ impl CanMsg {
         self.rtr = true;
     }
 
+    pub fn get_dlc(&self) -> u32 {
+        return self.dlc;
+    }
+
     pub fn set_dlc(&mut self, dlc: u32) {
         self.dlc = dlc;
+    }
+
+    pub fn get_data(&self) -> [u8; 8] {
+        return self.data;
     }
 
     pub fn set_data(&mut self, data: [u8; 8]) {

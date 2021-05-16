@@ -53,19 +53,16 @@ pub extern fn start() {
 
     usart.open(hal::usart::WordLen::Bits8, hal::usart::StopLen::StopBit1, hal::usart::BaudRate::Baud9600, freq, hal::usart::OverSample::Oversample16);
     let ci = hal::can::CanInit::init();
-    let result = can.open(&ci);
+    can.open(&ci);
+    can.filter_init(0, false, false, true, 0);
 
     //let dogmeat = [0x44, 0x6F, 0x67, 0x6D, 0x65, 0x61, 0x74, 0x0D];
 
+    let canopen = driver::can::canopen::CANOpen::init(0);
     let mut msg = hal::can::CanMsg::init();
-    msg.set_dlc(2);
-    msg.set_data([1, 0, 0, 0, 0, 0, 0 ,0]); // Transition to operational
+    let mut msgr = hal::can::CanMsg::init();
 
-    if result { // CHECK IF INQR IS GOOD
-        usart.write(&[0x44, 0x00, 0x01, 0x0D]);
-    } else {
-        usart.write(&[0x44, 0x00, 0x00, 0x0D]);
-    }
+    canopen.nmt_write_start(0, &mut msg);
 
     let result = can.write(&msg);
 
@@ -75,9 +72,7 @@ pub extern fn start() {
         usart.write(&[0x44, 0x01, 0x00, 0x0D]);
     }
 
-    msg.set_id(0x601, false);
-    msg.set_dlc(5);
-    msg.set_data([0x2F, 0x00, 0x62, 0x01, 0xFF, 0x00, 0x00, 0x00]);
+    canopen.sdo_init_download(1, driver::can::canopen::sdo::N::Bytes3, driver::can::canopen::sdo::E::Expedited, 0x6200, 0x01, [0xFF, 0x00, 0x00, 0x00], &mut msg);
 
     let result = can.write(&msg);
 
@@ -86,12 +81,6 @@ pub extern fn start() {
     } else {
         usart.write(&[0x44, 0x02, 0x00, 0x0D]);
     }
-
-    let result = can.read_esr();
-    usart.write(&[0x44, 0x03, result as u8, 0x0D]);
-
-    let result = can.read_msr();
-    usart.write(&[0x44, 0x04, result as u8, (result >> 8) as u8, 0x0D]);
 
     let mut i = false;
     let mut ind = 0;
@@ -102,11 +91,29 @@ pub extern fn start() {
                 ind = 0;
             }
 
-            let result = can.read_esr();
-            usart.write(&[0x44, 0x03, result as u8, 0x0D]);
-                
-            let result = can.read_msr();
-            usart.write(&[0x44, 0x04, result as u8, (result >> 8) as u8, 0x0D]);
+            if can.read_pend() {
+                can.read(&mut msgr);
+                usart.write(&[0x44, 0x06, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
+                usart.write(&[0x44, 0x05, 0x01, 0x0D]);
+            }
+
+            if can.read_pend() {
+                can.read(&mut msgr);
+                usart.write(&[0x44, 0x07, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
+                usart.write(&[0x44, 0x05, 0x01, 0x0D]);
+            }
+
+            if can.read_pend() {
+                can.read(&mut msgr);
+                usart.write(&[0x44, 0x08, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
+                usart.write(&[0x44, 0x05, 0x01, 0x0D]);
+            }
+
+            canopen.sdo_init_download(1, driver::can::canopen::sdo::N::Bytes3, driver::can::canopen::sdo::E::Expedited, 0x6200, 0x01, [1 << ind, 0x00, 0x00, 0x00], &mut msg);
+            can.write(&msg);
+
+            canopen.sdo_init_upload(1, 0x6000, 0x01, &mut msg);
+            can.write(&msg);
 
             if i {
                 gpiob.set_pin(board::l432kc::USER_LED_BIT);
@@ -116,9 +123,6 @@ pub extern fn start() {
                 i = true;
             }
             
-            msg.set_data([0x2F, 0x00, 0x62, 0x01, 1 << ind, 0x00, 0x00, 0x00]);
-            can.write(&msg);
-
             ind += 1;
             seq_timer.clr_flag();
         }

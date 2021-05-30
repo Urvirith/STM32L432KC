@@ -72,8 +72,6 @@ pub extern fn start() {
         usart.write(&[0x44, 0x01, 0x00, 0x0D]);
     }
 
-    canopen.sdo_init_download(1, driver::can::canopen::sdo::N::Bytes3, driver::can::canopen::sdo::E::Expedited, 0x6200, 0x01, [0xFF, 0x00, 0x00, 0x00], &mut msg);
-
     let result = can.write(&msg);
 
     if result == true { // CHECK IF WRITE IS GOOD
@@ -94,19 +92,16 @@ pub extern fn start() {
             if can.read_pend() {
                 can.read(&mut msgr);
                 usart.write(&[0x44, 0x06, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
-                usart.write(&[0x44, 0x05, 0x01, 0x0D]);
             }
 
             if can.read_pend() {
                 can.read(&mut msgr);
                 usart.write(&[0x44, 0x07, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
-                usart.write(&[0x44, 0x05, 0x01, 0x0D]);
             }
 
             if can.read_pend() {
                 can.read(&mut msgr);
                 usart.write(&[0x44, 0x08, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
-                usart.write(&[0x44, 0x05, 0x01, 0x0D]);
             }
 
             canopen.sdo_init_download(1, driver::can::canopen::sdo::N::Bytes3, driver::can::canopen::sdo::E::Expedited, 0x6200, 0x01, [1 << ind, 0x00, 0x00, 0x00], &mut msg);

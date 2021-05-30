@@ -341,6 +341,7 @@ impl Can {
     // In order to save CPU load, simplify the software and guarantee data consistency, the FIFO is managed completely by hardware. 
     // The application accesses the messages stored in the FIFO through the FIFO output mailbox
     pub fn read(&self, msg: &mut CanMsg) ->  bool {
+        /* Form The Pointers Dynamically */
         let regl;
         let regh;
         let ri;
@@ -349,20 +350,21 @@ impl Can {
         let rdh;
         let rf;
         
-        // Assign the pointer to simplify the logic
+        /* Assign the pointer to simplify the logic, If Mailbox 0 Has More Than 1 Then Read 0 And Has A Message Waiting */
         if (pointer::get_ptr_vol_u32(self.rf0r, FMP_OFFSET, FMP_MASK) > pointer::get_ptr_vol_u32(self.rf1r, FMP_OFFSET, FMP_MASK)) && (pointer::get_ptr_vol_u32(self.rf0r, FMP_OFFSET, FMP_MASK) > 0) {
             ri  = self.ri0r;
             rdt = self.rdt0r;
             rdl = self.rdl0r;
             rdh = self.rdh0r;
             rf  = self.rf0r;
+        /* Assign the pointer to simplify the logic, If Mailbox 1 Has More Than 0 Then Read 1 And Has A Message Waiting */
         } else if (pointer::get_ptr_vol_u32(self.rf1r, FMP_OFFSET, FMP_MASK) > pointer::get_ptr_vol_u32(self.rf0r, FMP_OFFSET, FMP_MASK)) && (pointer::get_ptr_vol_u32(self.rf1r, FMP_OFFSET, FMP_MASK) > 0) {
             ri  = self.ri1r;
             rdt = self.rdt1r;
             rdl = self.rdl1r;
             rdh = self.rdh1r;
             rf  = self.rf1r;
-        } else {
+        } else { /* No Available Messages Were Found */
             return false;
         }
 

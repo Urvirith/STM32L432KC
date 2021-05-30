@@ -4,7 +4,6 @@ use super::CANOpen;
 use crate::hal::{can::CanMsg};
 
 const SDO_TX:           u32 = 0x580;    // Server Rx Client Tx
-const SDO_RX:           u32 = 0x600;    // Server TX Client RX
 
 const IDE:              bool = false;   // CANOpen only uses normal ID
 
@@ -69,14 +68,14 @@ impl CANOpen {
             E::Segmented => CANOpenSdo::init(Ccs::InitDl, N::Bytes0, e, S::DataSizeN, od_ind, od_sub, data)
         };
 
-        self.sdo_write(SDO_RX, node_id, dlc, &sdo, msg);
+        self.sdo_write(self.get_rsdo(), node_id, dlc, &sdo, msg);
     }
 
     pub fn sdo_init_upload(&self, node_id: u32, od_ind: u16, od_sub: u8, msg: &mut CanMsg) {
         let data = [0; 4];
         let sdo = CANOpenSdo::init(Ccs::InitUl, N::Bytes0, E::Segmented, S::Unset, od_ind, od_sub, data);
 
-        self.sdo_write(SDO_RX, node_id, DLC_UP, &sdo, msg);
+        self.sdo_write(self.get_rsdo(), node_id, DLC_UP, &sdo, msg);
     }
 
     /* All Write Functions Will Be Passed Through Here */

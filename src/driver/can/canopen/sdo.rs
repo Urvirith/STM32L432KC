@@ -1,9 +1,7 @@
 /* Service Data Object */
 /* SDO Is A Client / Server Type */
 use super::CANOpen;
-use crate::hal::{can::CanMsg};
-
-const SDO_TX:           u32 = 0x580;    // Server Rx Client Tx
+use crate::hal::{common, can::CanMsg};
 
 const IDE:              bool = false;   // CANOpen only uses normal ID
 
@@ -11,6 +9,11 @@ const S_OFFSET:         u8 = 0;
 const E_OFFSET:         u8 = 1;
 const N_OFFSET:         u8 = 2;
 const CCS_OFFSET:       u8 = 5;
+
+const S_MASK:           u8 = common::MASK_1_BIT as u8; 
+const E_MASK:           u8 = common::MASK_1_BIT as u8;
+const N_MASK:           u8 = common::MASK_2_BIT as u8;
+const CCS_MASK:         u8 = common::MASK_3_BIT as u8;
 
 const OD_MASK:          u16 = 0xFF;
 
@@ -25,11 +28,37 @@ const DLC_UP:           u32 = 4;
 // 4 for aborting an SDO transfer,
 // 5 for SDO block upload,
 // 6 for SDO block download
-pub enum Ccs {SegDl, InitDl, InitUl, AbortTrans, BlkUl, BlkDl}
+pub enum Ccs {SegDl, InitDl, InitUl, AbortTrans, BlkUl, BlkDl, Unknown}
+
+fn sdo_ccs(cmd_byte: u8) -> Ccs {
+    let ccs = (cmd_byte >> CCS_OFFSET) & CCS_MASK;
+
+    return match ccs {
+        0               =>  Ccs::SegDl,
+        1               =>  Ccs::InitDl,
+        2               =>  Ccs::InitUl,
+        3               =>  Ccs::AbortTrans,
+        4               =>  Ccs::BlkUl,
+        5               =>  Ccs::BlkDl,
+        _               =>  Ccs::Unknown
+    };
+}
 
 // N is the number of bytes in the data part of the message 
 // which do not contain data, only valid if e and s are set
 pub enum N {Bytes0, Bytes1, Bytes2, Bytes3} 
+
+fn sdo_n(cmd_byte: u8) -> N {
+    let n = (cmd_byte >> N_OFFSET) & N_MASK;
+
+    return match n {
+        0               =>  N::Bytes0,
+        1               =>  N::Bytes1,
+        2               =>  N::Bytes2,
+        3               =>  N::Bytes3,
+        _               =>  N::Bytes3
+    };
+}
 
 // E if set, 
 // indicates an expedited transfer, 
@@ -39,10 +68,30 @@ pub enum N {Bytes0, Bytes1, Bytes2, Bytes3}
 // are used
 pub enum E {Segmented, Expedited}
 
+fn sdo_e(cmd_byte: u8) -> E {
+    let e = (cmd_byte >> E_OFFSET) & E_MASK;
+
+    return match e {
+        0               =>  E::Segmented,
+        1               =>  E::Expedited,
+        _               =>  E::Expedited
+    };
+}
+
 // S if set, 
 // indicates that the data size is specified in n (if e is set) 
 // or in the data part of the message
 pub enum S {Unset, DataSizeN}
+
+fn sdo_s(cmd_byte: u8) -> S {
+    let s = (cmd_byte >> S_OFFSET) & S_MASK;
+
+    return match s {
+        0               =>  S::Unset,
+        1               =>  S::DataSizeN,
+        _               =>  S::DataSizeN
+    };
+}
 
 pub struct CANOpenSdo {
     cmd_byte:   u8,         // Combination of CCS, N, E, S
@@ -64,8 +113,8 @@ impl CANOpen {
         };
 
         let sdo = match e {
-            E::Expedited => CANOpenSdo::init(Ccs::InitDl, n, e, S::DataSizeN, od_ind, od_sub, data),
-            E::Segmented => CANOpenSdo::init(Ccs::InitDl, N::Bytes0, e, S::DataSizeN, od_ind, od_sub, data)
+            E::Expedited => CANOpenSdo::init_write(Ccs::InitDl, n, e, S::DataSizeN, od_ind, od_sub, data),
+            E::Segmented => CANOpenSdo::init_write(Ccs::InitDl, N::Bytes0, e, S::DataSizeN, od_ind, od_sub, data)
         };
 
         self.sdo_write(self.get_rsdo(), node_id, dlc, &sdo, msg);
@@ -73,7 +122,7 @@ impl CANOpen {
 
     pub fn sdo_init_upload(&self, node_id: u32, od_ind: u16, od_sub: u8, msg: &mut CanMsg) {
         let data = [0; 4];
-        let sdo = CANOpenSdo::init(Ccs::InitUl, N::Bytes0, E::Segmented, S::Unset, od_ind, od_sub, data);
+        let sdo = CANOpenSdo::init_write(Ccs::InitUl, N::Bytes0, E::Segmented, S::Unset, od_ind, od_sub, data);
 
         self.sdo_write(self.get_rsdo(), node_id, DLC_UP, &sdo, msg);
     }
@@ -104,7 +153,8 @@ impl CANOpen {
 }
 
 impl CANOpenSdo {
-    pub fn init(ccs: Ccs, n: N, e: E, s: S, od_ind: u16, od_sub: u8, data: [u8; 4]) -> CANOpenSdo {
+    /* When Generating An SDO Message */
+    pub fn init_write(ccs: Ccs, n: N, e: E, s: S, od_ind: u16, od_sub: u8, data: [u8; 4]) -> CANOpenSdo {
         let mut cmd_byte = 0;
 
         cmd_byte |= (s as u8) << S_OFFSET;
@@ -120,8 +170,34 @@ impl CANOpenSdo {
         };
     }
 
+    /* When Receiving An SDO Message */
+    pub fn init_read(msg: [u8; 8]) -> CANOpenSdo {        
+        return CANOpenSdo {
+            cmd_byte:   msg[0],
+            od_ind:     ((msg[1] as u16) << 0) | ((msg[2] as u16) << 8),
+            od_sub:     msg[3],
+            data:       [msg[4], msg[5], msg[6], msg[7]]
+        };
+    }
+
     pub fn get_cmd_byte(&self) -> u8 {
         return self.cmd_byte;
+    }
+
+    pub fn get_ccs(&self) -> Ccs {
+        return sdo_ccs(self.cmd_byte);
+    }
+
+    pub fn get_n(&self) -> N {
+        return sdo_n(self.cmd_byte);
+    }
+
+    pub fn get_e(&self) -> E {
+        return sdo_e(self.cmd_byte);
+    }
+
+    pub fn get_s(&self) -> S {
+        return sdo_s(self.cmd_byte);
     }
 
     pub fn get_od_ind(&self) -> u16 {

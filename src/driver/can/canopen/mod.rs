@@ -6,6 +6,8 @@
 pub mod sdo;
 pub mod nmt;
 
+use crate::hal::{can::CanMsg};
+
 /* State Commands For CANOpen */
 const BOOTUP:           u8 = 0x00;      // Boot up (Initialising)
 const STOPPED:          u8 = 0x04;      // Stopped State
@@ -36,30 +38,30 @@ const FC_MASK:          u32 = 0x0780;   // Standard ID, Function Code Mask
 
 pub struct CANOpen {
     node:   u32,                        /* Internal Node Address Set By Program 1 - 127 */
-    state:  CanOpenState,               /* Internal State Of The Node */
+    state:  CANOpenState,               /* Internal State Of The Node */
     toggle: bool                        /* Internal Bit For NMT Node Guarding */
 }
 
 #[derive(Clone, Copy)]
-pub enum CanOpenState {Bootup, Stopped, Operational, PreOperational, Unknown}
-
-pub fn canopen_state_val(state: CanOpenState) -> u8 {
-    return match state {
-        CanOpenState::Bootup            => BOOTUP,
-        CanOpenState::Stopped           => STOPPED,
-        CanOpenState::Operational       => OPERATIONAL,
-        CanOpenState::PreOperational    => PREOPERATION,
-        CanOpenState::Unknown           => UNKNOWN
-    };
+pub enum CANOpenState {
+    Bootup          = 0x00, 
+    Stopped         = 0x04, 
+    Operational     = 0x05, 
+    PreOperational  = 0x7F, 
+    Unknown         = 0xFF
 }
 
-pub fn canopen_state(state: u8) -> CanOpenState {
+pub fn canopen_state_val(state: CANOpenState) -> u8 {
+    return state as u8;
+}
+
+pub fn canopen_state(state: u8) -> CANOpenState {
     return match state {
-        BOOTUP                          =>  CanOpenState::Bootup,
-        STOPPED                         =>  CanOpenState::Stopped,
-        OPERATIONAL                     =>  CanOpenState::Operational,
-        PREOPERATION                    =>  CanOpenState::PreOperational,
-        _                               =>  CanOpenState::Unknown
+        BOOTUP                          =>  CANOpenState::Bootup,
+        STOPPED                         =>  CANOpenState::Stopped,
+        OPERATIONAL                     =>  CANOpenState::Operational,
+        PREOPERATION                    =>  CANOpenState::PreOperational,
+        _                               =>  CANOpenState::Unknown
     };
 }
 
@@ -67,7 +69,7 @@ impl CANOpen {
     pub fn init(node: u32) -> CANOpen {
         return CANOpen {
             node:   node,
-            state:  CanOpenState::Bootup,
+            state:  CANOpenState::Bootup,
             toggle: false
         };
     }
@@ -80,17 +82,29 @@ impl CANOpen {
         self.node = node;
     }
 
-    pub fn get_state(&self) -> CanOpenState {
+    pub fn get_state(&self) -> CANOpenState {
         return self.state;
     }
 
-    pub fn set_state(&mut self, state: CanOpenState) {
+    pub fn set_state(&mut self, state: CANOpenState) {
         self.state = state;
     }
 
     /* Client Tx, Server Rx */
     pub fn get_rsdo(&self) -> u32 {
         return RSDO;
+    }
+
+    /* Get The Node Of The Remote Message - Standard ID Only */
+    pub fn get_source_node(cob_id: u32) -> u32 {
+        return cob_id & NODE_MASK;
+    }
+
+    /* Decision Tree For Messages */
+    pub fn msg_handler(&self, msg: &mut CanMsg) {
+        let fc = msg.get_id();
+
+
     }
 }
 

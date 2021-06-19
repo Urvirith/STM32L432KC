@@ -16,7 +16,8 @@ const DLC_NMT:          u32 = 0x02;     // NMT Standard DLC
 const DLC_HB:           u32 = 0x01;     // NMT Heartbeat DLC 
 const CO_IDE:           bool = false;   // CANOpen supports 1 -127 nodes
 
-const MASK:             u32 = common::MASK_7_BIT;
+const HB_MASK:          u32 = common::MASK_1_BIT;
+const MASK:             u32 = common::MASK_6_BIT;
 const SHIFT:            u32 = 7;
 
 pub const HB:           u32 = 0x0700;   // Heartbeat / Node Guarding COB-ID
@@ -52,9 +53,18 @@ impl CANOpen {
         msg.set_data([COMMS, node_id, 0, 0, 0, 0, 0, 0]);
     }
 
-    /* Heartbeat Consumer */
-    pub fn nmt_read_heartbeat(&self, msg: &CanMsg) -> CANOpenState {
-        return canopen::canopen_state(msg.get_data()[0]);
+    /* Heartbeat / Guarding Consumer */
+    pub fn nmt_read_heartbeat(&mut self, msg: &CanMsg) {
+        let data = msg.get_data()[0];
+        
+        if ((data  >> SHIFT) & HB_MASK as u8) == 1 {
+            self.toggle = true;
+        } else {
+            self.toggle = false;
+        }
+
+        let state = data & MASK as u8;
+        self.state = canopen::canopen_state(state);
     }
 
     /* Heartbeat Producer */
@@ -64,23 +74,27 @@ impl CANOpen {
         msg.set_data([canopen::canopen_state_val(self.state), 0, 0, 0, 0, 0, 0, 0]);
     }
 
+    /* Guarding */
+    /* Is A Client Server - Request Response Of Heartbeat, Can Be Used To read The State */
     pub fn nmt_request_guarding(&mut self, node_id: u32, msg: &mut CanMsg) {       
         msg.set_id(HB + node_id, CO_IDE);
         msg.set_rtr();
     }
 
-    pub fn nmt_write_guarding(&mut self, node_id: u32, msg: &mut CanMsg) {
-        let mut byte = 0;
+    /* Guarding */
+    /* Is a Client Server - This Is The Server Response Of Its Own State */
+    pub fn nmt_response_guarding(&mut self, node_id: u32, msg: &mut CanMsg) {
+        let mut hb = 0;
 
-        if self.toggle {
-            byte = 1 << SHIFT;
+        if self.toggle { // Generate a heartbeat signal for the 7 bit in the first byte of data
+            hb = 1 << SHIFT;
             self.toggle = false;
         } else {
-            byte = 0;
+            hb = 0 << SHIFT;
             self.toggle = true;
         }
         
         msg.set_id(HB + node_id, CO_IDE);
-        msg.set_data([canopen::canopen_state_val(self.state) | byte, 0, 0, 0, 0, 0, 0, 0]);
+        msg.set_data([canopen::canopen_state_val(self.state) | hb, 0, 0, 0, 0, 0, 0, 0]);
     }
 }

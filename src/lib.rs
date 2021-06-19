@@ -48,7 +48,7 @@ pub extern fn start() {
     gpiob.otype(board::l432kc::USER_LED, board::l432kc::USER_LED_MODE, board::l432kc::USER_LED_OTYPE, board::l432kc::USER_LED_AF);
 
     seq_timer.open(hal::timer::TimerType::Cont, hal::timer::Direction::Upcount);
-    seq_timer.set_scl(50, freq, 1500);
+    seq_timer.set_scl(100, freq, 150);
     seq_timer.start();
 
     usart.open(hal::usart::WordLen::Bits8, hal::usart::StopLen::StopBit1, hal::usart::BaudRate::Baud9600, freq, hal::usart::OverSample::Oversample16);
@@ -58,11 +58,13 @@ pub extern fn start() {
 
     //let dogmeat = [0x44, 0x6F, 0x67, 0x6D, 0x65, 0x61, 0x74, 0x0D];
 
-    let canopen = driver::can::canopen::CANOpen::init(0);
+    /* CANOpen Master */
+    let co_mst = driver::can::canopen::CANOpen::init(0);
+    let wago = driver::can::canopen::CANOpen::init(1);
     let mut msg = hal::can::CanMsg::init();
     let mut msgr = hal::can::CanMsg::init();
 
-    canopen.nmt_write_start(0, &mut msg);
+    co_mst.nmt_write_start(&mut msg);
 
     let result = can.write(&msg);
 
@@ -84,30 +86,30 @@ pub extern fn start() {
     let mut ind = 0;
 
     loop {
+        if can.read_pend() {
+            can.read(&mut msgr);
+            usart.write(&[0x44, 0x06, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
+        }
+
+        if can.read_pend() {
+            can.read(&mut msgr);
+            usart.write(&[0x44, 0x07, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
+        }
+
+        if can.read_pend() {
+            can.read(&mut msgr);
+            usart.write(&[0x44, 0x08, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
+        }
+        
         if seq_timer.get_flag() {
             if ind > 7 {
                 ind = 0;
             }
 
-            if can.read_pend() {
-                can.read(&mut msgr);
-                usart.write(&[0x44, 0x06, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
-            }
-
-            if can.read_pend() {
-                can.read(&mut msgr);
-                usart.write(&[0x44, 0x07, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
-            }
-
-            if can.read_pend() {
-                can.read(&mut msgr);
-                usart.write(&[0x44, 0x08, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
-            }
-
-            canopen.sdo_init_download(1, driver::can::canopen::sdo::N::Bytes3, driver::can::canopen::sdo::E::Expedited, 0x6200, 0x01, [1 << ind, 0x00, 0x00, 0x00], &mut msg);
+            wago.sdo_init_download(driver::can::canopen::sdo::N::Bytes3, driver::can::canopen::sdo::E::Expedited, 0x6200, 0x01, [1 << ind, 0x00, 0x00, 0x00], &mut msg);
             can.write(&msg);
 
-            canopen.sdo_init_upload(1, 0x6000, 0x01, &mut msg);
+            wago.sdo_init_upload(0x6000, 0x01, &mut msg);
             can.write(&msg);
 
             if i {

@@ -48,7 +48,7 @@ pub extern fn start() {
     gpiob.otype(board::l432kc::USER_LED, board::l432kc::USER_LED_MODE, board::l432kc::USER_LED_OTYPE, board::l432kc::USER_LED_AF);
 
     seq_timer.open(hal::timer::TimerType::Cont, hal::timer::Direction::Upcount);
-    seq_timer.set_scl(5000, 16, 10);
+    seq_timer.set_scl(50, freq, 100);
     seq_timer.start();
 
     usart.open(hal::usart::WordLen::Bits8, hal::usart::StopLen::StopBit1, hal::usart::BaudRate::Baud921600, freq, hal::usart::OverSample::Oversample16);

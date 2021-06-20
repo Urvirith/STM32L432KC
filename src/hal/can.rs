@@ -601,7 +601,7 @@ impl CanInit {
             abom:       true,       // Automatic Bus-off Management
             ttcm:       false,
             // ALL OF THESE ARE + 1 within BTR, so from http://www.bittiming.can-wiki.info/ take all and - 1
-            brp:        1,          // Baud Rate Prescaler
+            brp:        0,          // Baud Rate Prescaler
             ts1:        12,         // Time Segment 1
             ts2:        1,          // Time Segment 2
             sjw:        0           // Resynchronization Jump Width

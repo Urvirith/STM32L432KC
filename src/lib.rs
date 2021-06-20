@@ -48,10 +48,10 @@ pub extern fn start() {
     gpiob.otype(board::l432kc::USER_LED, board::l432kc::USER_LED_MODE, board::l432kc::USER_LED_OTYPE, board::l432kc::USER_LED_AF);
 
     seq_timer.open(hal::timer::TimerType::Cont, hal::timer::Direction::Upcount);
-    seq_timer.set_scl(100, freq, 150);
+    seq_timer.set_scl(25000, 16, 0);
     seq_timer.start();
 
-    usart.open(hal::usart::WordLen::Bits8, hal::usart::StopLen::StopBit1, hal::usart::BaudRate::Baud9600, freq, hal::usart::OverSample::Oversample16);
+    usart.open(hal::usart::WordLen::Bits8, hal::usart::StopLen::StopBit1, hal::usart::BaudRate::Baud921600, freq, hal::usart::OverSample::Oversample16);
     let ci = hal::can::CanInit::init();
     can.open(&ci);
     can.filter_init(0, false, false, true, 0);

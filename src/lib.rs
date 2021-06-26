@@ -74,14 +74,6 @@ pub extern fn start() {
         usart.write(&[0x44, 0x01, 0x00, 0x0D]);
     }
 
-    let result = can.write(&msg);
-
-    if result == true { // CHECK IF WRITE IS GOOD
-        usart.write(&[0x44, 0x02, 0x01, 0x0D]);
-    } else {
-        usart.write(&[0x44, 0x02, 0x00, 0x0D]);
-    }
-
     let mut i = false;
     let mut ind = 0;
 

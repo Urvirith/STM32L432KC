@@ -477,9 +477,17 @@ impl Can {
         return true;
     }
 
-    /* TO-DO */
-    pub fn write_sts(&self) {
-
+    /* Verify If There Is a Free Area To Write */
+    pub fn write_pend(&self) -> bool {
+        if pointer::get_ptr_vol_bit_u32(self.tsr, TME0_BIT) { 
+            return true;
+        } else if pointer::get_ptr_vol_bit_u32(self.tsr, TME1_BIT) {
+            return true;
+        } else if pointer::get_ptr_vol_bit_u32(self.tsr, TME2_BIT) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     pub fn filter_init(&self, filter: u32, list: bool, fifo: bool, active: bool, mask: u32) {

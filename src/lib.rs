@@ -60,7 +60,8 @@ pub extern fn start() {
 
     /* CANOpen Master */
     let co_mst = driver::can::canopen::CANOpen::init(0);
-    let wago = driver::can::canopen::CANOpen::init(1);
+    //let wago = driver::can::canopen::CANOpen::init(1);
+    let wago = driver::can::wago750_337::Wago750::init(1);
     let mut msg = hal::can::CanMsg::init();
     let mut msgr = hal::can::CanMsg::init();
 
@@ -98,11 +99,9 @@ pub extern fn start() {
                 ind = 0;
             }
 
-            wago.sdo_init_download(driver::can::canopen::sdo::N::Bytes3, driver::can::canopen::sdo::E::Expedited, 0x6200, 0x01, [1 << ind, 0x00, 0x00, 0x00], &mut msg);
-            can.write(&msg);
+            wago.test_outputs(&mut msg, &can, &ind);
 
-            wago.sdo_init_upload(0x6000, 0x01, &mut msg);
-            can.write(&msg);
+            wago.test_request_inputs(&mut msg, &can);
 
             if i {
                 gpiob.set_pin(board::l432kc::USER_LED_BIT);

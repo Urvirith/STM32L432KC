@@ -74,30 +74,31 @@ impl CANOpen {
         };
     }
 
+    /* Get The Node Of The Remote Message - Standard ID Only */
+    /* Used Against The Master To Get The Node Number, Or A Mask Can Applied At Higher Logic */
+    pub fn get_source_node(&self, cob_id: u32) -> u32 {
+        return cob_id & NODE_MASK;
+    }
+
+    /* Get The Function Code Of The Remote Message - Standard ID Only */
+    /* Used Against The Master Or Slave To Get The Function Code, Or A Mask Can Applied At Higher Logic */
+    pub fn get_source_fc(&self, cob_id: u32) -> u32 {
+        return cob_id & FC_MASK;
+    }
+
+    /* Obtain Own Node ID */
     pub fn get_node(&self) -> u32 {
         return self.node;
     }
 
-    pub fn set_node(&mut self, node: u32) {
-        self.node = node;
-    }
-
+    /* Obtain Own State */
     pub fn get_state(&self) -> CANOpenState {
         return self.state;
     }
 
+    /* Set Internal State */
     pub fn set_state(&mut self, state: CANOpenState) {
         self.state = state;
-    }
-
-    /* Client Tx, Server Rx */
-    pub fn get_rsdo(&self) -> u32 {
-        return RSDO;
-    }
-
-    /* Get The Node Of The Remote Message - Standard ID Only */
-    pub fn get_source_node(cob_id: u32) -> u32 {
-        return cob_id & NODE_MASK;
     }
 
     /* Decision Tree For Messages */
@@ -105,6 +106,17 @@ impl CANOpen {
         let fc = msg.get_id();
 
 
+    }
+
+    
+    /* FOR USE IN DOWN STEAM LOGIC WITHIN*/
+    /* Client Tx, Server Rx - Used In SDO Creation*/
+    pub fn get_rsdo(&self) -> u32 {
+        return RSDO;
+    }
+
+    pub fn get_tsdo(&self) -> u32 {
+        return TSDO;
     }
 }
 

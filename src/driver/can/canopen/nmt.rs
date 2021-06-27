@@ -78,6 +78,7 @@ impl CANOpen {
     pub fn nmt_request_guarding(&mut self, msg: &mut CanMsg) {       
         msg.set_id(HB + self.node, CO_IDE);
         msg.set_rtr();
+        msg.set_data([0, 0, 0, 0, 0, 0, 0, 0]);
     }
 
     /* Guarding */

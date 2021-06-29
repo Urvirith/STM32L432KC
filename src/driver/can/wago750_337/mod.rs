@@ -1,10 +1,17 @@
 /* CAN (Controller Area Network) Wago I/O Device */
 /* https://www.wago.com/us/controllers-bus-couplers-i-o/fieldbus-coupler-canopen/p/750-337#downloads */
 
+/*
+    750_337 Communication Module - CANOpen
+    750_    Discrete Module PNP (24 Sensing)
+    750_    Discrete Module NPN (24 Sourcing)
+    750_    Analogue Module In  (4-20mA Sinking)
+    750_    Analogue Module Out (4-20mA Sinking)
+*/
+
+
 use crate::hal::{can::CanMsg, can::Can};
 use super::canopen::{CANOpen, sdo};
-
-//sdo_init_download(driver::can::canopen::sdo::N::Bytes3, driver::can::canopen::sdo::E::Expedited, 0x6200, 0x01, [1 << ind, 0x00, 0x00, 0x00], &mut msg);
 
 const GUARDTIME:        u16 = 0x100C; 
 const LIFEFACTOR:       u16 = 0x100D;
@@ -31,21 +38,17 @@ impl Wago750 {
             co_node:    CANOpen::init(node)
         }
     }
-
-    pub fn get_state(&self, msg: &CanMsg, bus: &Can) {
-
-    }
     
     /* This is a pure custom implementation due to the nature of the flex I/O as the data packs itself dynamically */
     pub fn setup(&mut self, msg: &mut CanMsg, bus: &Can) {
         // Set Up Node Guarding / PDOs
         if bus.write_pend() {
             match self.step {
-                0 => {  // Initialize The Guard Time
+                0 => {      // Initialize The Guard Time
                     self.setup_guardtime(msg, bus, GUARDTIMEMS);
-                } 1 => { // Initialize The Life Factor Time
+                } 1 => {    // Initialize The Life Factor Time
                     self.setup_lifefactor(msg, bus, LIFEFACTORMUL);
-                } 2 => { // 
+                } 2 => {    // Initialize The PDO Rx (Client Recieve) For Current Setup
     
                 } _ => {
     

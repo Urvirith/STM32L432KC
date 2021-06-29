@@ -117,18 +117,18 @@ impl CANOpen {
             E::Segmented => CANOpenSdo::init_write(Ccs::InitDl, N::Bytes0, e, S::DataSizeN, od_ind, od_sub, data)
         };
 
-        self.sdo_write(self.get_rsdo(), dlc, &sdo, msg);
+        self.sdo_write(self.get_rsdo(), dlc, sdo, msg);
     }
 
     pub fn sdo_init_upload(&self, od_ind: u16, od_sub: u8, msg: &mut CanMsg) {
         let data = [0; 4];
         let sdo = CANOpenSdo::init_write(Ccs::InitUl, N::Bytes0, E::Segmented, S::Unset, od_ind, od_sub, data);
 
-        self.sdo_write(self.get_rsdo(), DLC_UP, &sdo, msg);
+        self.sdo_write(self.get_rsdo(), DLC_UP, sdo, msg);
     }
 
     /* All Write Functions Will Be Passed Through Here */
-    pub fn sdo_write(&self, cod_id: u32, dlc: u32, sdo: &CANOpenSdo, msg: &mut CanMsg) { 
+    pub fn sdo_write(&self, cod_id: u32, dlc: u32, sdo: CANOpenSdo, msg: &mut CanMsg) { 
         let mut data = [0; 8];
 
         data[0] = sdo.cmd_byte;
@@ -141,14 +141,15 @@ impl CANOpen {
         data[7] = sdo.data[3];
 
         msg.set_id(cod_id + self.node, false);
-        msg.set_data(data);
+        msg.clr_rtr();
         msg.set_dlc(dlc);
+        msg.set_data(data);
     }
 
 
-
-    pub fn sdo_read(&self, msg: &CanMsg) {
-
+    /* TO-DO IMPLEMENT DECONSTRUCTION OF THE  */
+    pub fn sdo_read(&self, msg: &CanMsg) -> CANOpenSdo {
+        return CANOpenSdo::init_read(&msg.get_data())
     }
 }
 
@@ -171,7 +172,7 @@ impl CANOpenSdo {
     }
 
     /* When Receiving An SDO Message */
-    pub fn init_read(msg: [u8; 8]) -> CANOpenSdo {        
+    pub fn init_read(msg: &[u8; 8]) -> CANOpenSdo {        
         return CANOpenSdo {
             cmd_byte:   msg[0],
             od_ind:     ((msg[1] as u16) << 0) | ((msg[2] as u16) << 8),

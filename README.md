@@ -16,5 +16,7 @@ Programming Manual
 https://www.st.com/resource/en/programming_manual/dm00046982-stm32-cortexm4-mcus-and-mpus-programming-manual-stmicroelectronics.pdf
 Board Specifics
 https://www.st.com/resource/en/datasheet/stm32l432kc.pdf
-Bit Timings Can Be Found Here
+CAN Bit Timings Can Be Found Here
 http://www.bittiming.can-wiki.info/
+WAGO Remote I/O Unit
+https://www.wago.com/us/controllers-bus-couplers-i-o/fieldbus-coupler-canopen/p/750-337#downloads

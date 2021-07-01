@@ -90,3 +90,18 @@ pub fn range(rng: MsiRange) -> u32 {
 pub fn range_mhz(rng: MsiRange) -> u32 {
     return (range(rng) / 1000);
 }
+
+/* GENERATE A DELAY TIME */
+/*
+    1 Hz = 1 Cycle Per Second
+    1 Mhz = 1 Cycle Per Microsecond
+    Ex. 16 Mhz = 16 Cycles Per Microsecond
+        50 us wait requested
+        16 * 50 = 800 
+        Thus 800 cycles required to wait 50us
+*/
+pub fn wait_in_us(us: u32, rng: MsiRange) -> u32 {
+    return us * (range(rng) / 1000);
+}
+
+pub const WAIT100US:    u32 = 1600;

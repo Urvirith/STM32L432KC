@@ -84,6 +84,8 @@ const READ:             bool = false;
 const WRITE:            bool = true;
 const LEN_1_BYTE:       u32 = 1;
 
+const TIMEOUT:          u32 = common::WAIT100US;
+
 impl I2c { 
     /* Initialize The Structure */
     pub fn init(base: u32) -> I2c {
@@ -154,7 +156,7 @@ impl I2c {
 
         let mut i = 0; // CONVERT TO FAULT TIMER, VOLITILE WILL PREVENT OPTIMIZATION
 
-        while i < 100000 {
+        while i < TIMEOUT {
             i+=1;
         }
     }
@@ -197,7 +199,7 @@ impl I2c {
         let mut i = 0; // CONVERT TO FAULT TIMER
 
         while pointer::get_ptr_vol_bit_u32(self.cr2, START_BIT) {
-            if i > 100000 {
+            if i > TIMEOUT {
                 return false;
             }
             i+=1;
@@ -211,7 +213,7 @@ impl I2c {
         let mut i = 0; 
 
         while pointer::get_ptr_vol_bit_u32(self.cr2, STOP_BIT){
-            if i > 1000000 {
+            if i > TIMEOUT {
                 return false;
             }
             i+=1;
@@ -223,7 +225,7 @@ impl I2c {
         let mut i = 0; // CONVERT TO FAULT TIMER
 
         while !pointer::get_ptr_vol_bit_u32(self.isr, TC_BIT) {
-            if i > 100000 {
+            if i > TIMEOUT {
                 return false;
             }
 
@@ -253,7 +255,7 @@ impl I2c {
                 i+=1;
                 t=0;
             } else {
-                if t > 100000 { // Convert to fault timer rather than else statement
+                if t > TIMEOUT { // Convert to fault timer rather than else statement
                     return false;
                 }
                 t+=1;
@@ -266,7 +268,7 @@ impl I2c {
         let mut i = 0; 
 
         while !pointer::get_ptr_vol_bit_u32(self.isr, RXNE_BIT) {
-            if i > 100000 {
+            if i > TIMEOUT {
                 return 0;
             }
             i+=1;
@@ -328,7 +330,7 @@ impl I2c {
                 pointer::set_ptr_vol_raw_u8(self.txdr, buf[i]);
                 i+=1;
             } else {
-                if t > 100000 { // Convert to fault timer rather than else statement
+                if t > TIMEOUT { // Convert to fault timer rather than else statement
                     return false;
                 }
                 t+=1;
@@ -341,7 +343,7 @@ impl I2c {
         let mut i = 0; 
 
         while !pointer::get_ptr_vol_bit_u32(self.isr, TXIS_BIT) {
-            if i > 100000 {
+            if i > TIMEOUT {
                 return false;
             }
             i+=1;

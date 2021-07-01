@@ -62,7 +62,7 @@ pub enum DataSize {
     Bits13  = 0x0C,
     Bits14  = 0x0D,
     Bits15  = 0x0E,
-    Bits16  = 0x0F,
+    Bits16  = 0x0F
 }
 
 /* Register Bits */
@@ -109,6 +109,8 @@ const DS_OFFSET:        u32 = 8;
 /* SR */
 const FRLVL_OFFSET:     u32 = 9;
 const FTLVL_OFFSET:     u32 = 11;
+
+const TIMEOUT:          u32 = common::WAIT100US;
 
 
 impl Spi {
@@ -225,13 +227,14 @@ impl Spi {
         pointer::set_ptr_vol_bit_u32(self.cr1, SPE_BIT);
     }
 
-    pub fn read(&self, buf: &mut [u8]) -> usize {     // Return true if error occured
-        let mut index = 0;
+    pub fn read(&self, buf: &mut [u8], len: usize) -> usize {     // Return true if error occured
+        let mut i = 0;
+        let mut f = 0; // CONVERT TO FAULT TIMER
 
-        while pointer::get_ptr_vol_u32(self.sr, FRLVL_OFFSET, FRLVL_MASK) != 0 {
-            if index < buf.len() {
-                buf[index] = pointer::get_ptr_vol_raw_u8(self.dr); // Will need to be changed if handling 16 bit words etc
-                index += 1;
+        while pointer::get_ptr_vol_bit_u32(self.sr, RXNE_BIT) {
+            if i < buf.len() {
+                buf[i] = pointer::get_ptr_vol_raw_u8(self.dr); // Will need to be changed if handling 16 bit words etc
+                i += 1;
             } else {
                 return 0x77;
             }
@@ -239,10 +242,21 @@ impl Spi {
             if self.error() {
                 //return (self.error_byte() + 0x10) as usize;
             }
+
+            if (len > 0) && (i < len) {
+                while !pointer::get_ptr_vol_bit_u32(self.sr, RXNE_BIT) {
+                    // SPIN WHILE THE RXNE IS NOT EMPTY, DUMP OUT IF ISSUE COMES UP
+                    if f > TIMEOUT {
+                        return 0x78;
+                    }
+                    f+=1;
+                }
+            }
         }
-        return index;
+        return i;
     }
 
+    /* Write Function */
     pub fn write(&self, buf: &[u8]) -> u8 {  // Return true if error occured
         let mut i = 0;
 
@@ -263,6 +277,14 @@ impl Spi {
         return 0;
     }
 
+    /* Write A Single Byte Of Data */
+    pub fn write_byte(&self, buf: u8) {
+        // Wait For FIFO To Free Before Writing Data To The Buffer
+        while pointer::get_ptr_vol_u32(self.sr, FTLVL_OFFSET, FTLVL_MASK) == 3 {
+            pointer::set_ptr_vol_raw_u8(self.dr, buf);
+        }
+    }
+
     //  The correct disable procedure is (except when receive only mode is used):
     //      1. Wait until FTLVL[1:0] = 00 (no more data to transmit).
     //      2. Wait until BSY=0 (the last data frame is processed).
@@ -274,17 +296,21 @@ impl Spi {
     //      3. Read data until FRLVL[1:0] = 00 (read all the received data
     pub fn disable(&self) -> bool {     // Return true if error occured
         while pointer::get_ptr_vol_u32(self.sr, FTLVL_OFFSET, FTLVL_MASK) != 0 {
+            /*
             if self.error() {
                 pointer::clr_ptr_vol_bit_u32(self.cr1, SPE_BIT);
                 return false;
             }
+            */
         }
 
         while pointer::get_ptr_vol_bit_u32(self.sr, BSY_BIT) {
+            /*
             if self.error() {
                 pointer::clr_ptr_vol_bit_u32(self.cr1, SPE_BIT);
                 return false;
             }
+            */
         }
 
         pointer::clr_ptr_vol_bit_u32(self.cr1, SPE_BIT);

@@ -92,6 +92,7 @@ pub struct CanInit {
 
 /* Message Struct */
 pub struct CanMsg {
+    read:       bool,       // Only Used When Read, Indicate If It Was Set Or Not
     id:         u32,        // Standard Identifier Or Extended Identifier
     ide:        bool,       // This Bit Defines The Identifier Type Of Message In The Mailbox 0: Standard Identifier 1: Extended Identifier.
     rtr:        bool,       // Remote Transmission Request 0: Data Frame 1: Remote Frame
@@ -340,7 +341,8 @@ impl Can {
     // For the reception of CAN messages, three mailboxes organized as a FIFO are provided. 
     // In order to save CPU load, simplify the software and guarantee data consistency, the FIFO is managed completely by hardware. 
     // The application accesses the messages stored in the FIFO through the FIFO output mailbox
-    pub fn read(&self, msg: &mut CanMsg) ->  bool {
+    pub fn read(&self) ->  CanMsg {
+        let mut msg = CanMsg::init();
         /* Form The Pointers Dynamically */
         let regl;
         let regh;
@@ -364,8 +366,9 @@ impl Can {
             rdl = self.rdl1r;
             rdh = self.rdh1r;
             rf  = self.rf1r;
-        } else { /* No Available Messages Were Found */
-            return false;
+        } else { /* No Available Messages Were Found Data Will Be Blank */
+            msg.read = false;
+            return msg;
         }
 
         msg.ide = pointer::get_ptr_vol_bit_u32(ri, IDE_BIT);
@@ -376,6 +379,7 @@ impl Can {
             msg.id = pointer::get_ptr_vol_u32(ri, STID_OFFSET, STID_MASK);
         }
 
+        msg.read = true;
         msg.rtr = pointer::get_ptr_vol_bit_u32(ri, RTR_BIT);
         msg.dlc = pointer::get_ptr_vol_u32(rdt, DLC_OFFSET, DLC_MASK);
         msg.fmi = pointer::get_ptr_vol_u32(rdt, FMI_OFFSET, FMI_MASK);
@@ -392,7 +396,7 @@ impl Can {
 
         pointer::set_ptr_vol_bit_u32(rf, RFOM_BIT);
 
-        return true;
+        return msg;
     }
 
     pub fn read_esr(&self) -> u32 {
@@ -426,7 +430,7 @@ impl Can {
     // The hardware indicates a successful transmission by setting the RQCP and TXOK bits in the CAN_TSR register. 
     // If the transmission fails, the cause is indicated by the ALST bit in the CAN_TSR register in case of an Arbitration Lost, and/or the TERR bit, 
     // in case of transmission error detection.
-    pub fn write(&self, msg: &CanMsg) -> bool { 
+    pub fn write(&self, msg: CanMsg) -> bool { 
         let regl = ((msg.data[3] as u32) << DATA_3_OFFSET) | ((msg.data[2] as u32) << DATA_2_OFFSET) | ((msg.data[1] as u32) << DATA_1_OFFSET) | ((msg.data[0] as u32) << DATA_0_OFFSET);
         let regh = ((msg.data[7] as u32) << DATA_7_OFFSET) | ((msg.data[6] as u32) << DATA_6_OFFSET) | ((msg.data[5] as u32) << DATA_5_OFFSET) | ((msg.data[4] as u32) << DATA_4_OFFSET);
         let ti;
@@ -552,6 +556,7 @@ impl Can {
 impl CanMsg {
     pub fn init() -> CanMsg {
         return CanMsg {
+            read:       false,
             id:         0, 
             ide:        false,
             rtr:        false,
@@ -559,6 +564,10 @@ impl CanMsg {
             fmi:        0,
             data:       [0; 8]
         };
+    }
+
+    pub fn get_read(&self) -> bool {
+        return self.read;
     }
 
     pub fn get_id(&self) -> u32 {

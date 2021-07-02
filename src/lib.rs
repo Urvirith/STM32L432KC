@@ -62,36 +62,25 @@ pub extern fn start() {
     /* CANOpen Master */
     let co_mst = driver::can::canopen::CANOpen::init(0);
     let wago = driver::can::wago750_337::Wago750::init(1);
+
     let mut msg = hal::can::CanMsg::init();
-    let mut msgr = hal::can::CanMsg::init();
 
-    //co_mst.nmt_write_start(&mut msg);
+    co_mst.nmt_write_start(&mut msg);
+    let result = can.write(msg);
 
-    //let result = can.write(&msg);
-
-    //if result { // CHECK IF WRITE IS GOOD
-        //usart.write(&[0x44, 0x01, 0x01, 0x0D]);
-    //} else {
-        //usart.write(&[0x44, 0x01, 0x00, 0x0D]);
-    //}
+    if result { // CHECK IF WRITE IS GOOD
+        usart.write(&[0x44, 0x01, 0x01, 0x0D]);
+    } else {
+        usart.write(&[0x44, 0x01, 0x00, 0x0D]);
+    }
 
     let mut i = false;
     let mut ind = 0;
 
     loop {
-        if can.read_pend() {
-            can.read(&mut msgr);
+        while can.read_pend() & !seq_timer.get_flag() {
+            let msgr = can.read();
             usart.write(&[0x44, 0x06, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
-        }
-
-        if can.read_pend() {
-            //can.read(&mut msgr);
-            usart.write(&[0x44, 0x07, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
-        }
-
-        if can.read_pend() {
-            //can.read(&mut msgr);
-            usart.write(&[0x44, 0x08, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
         }
         
         if seq_timer.get_flag() {
@@ -99,9 +88,8 @@ pub extern fn start() {
                 ind = 0;
             }
 
-            wago.test_outputs(&mut msg, &can, &ind);
-
-            //wago.test_request_inputs(&mut msg, &can);
+            wago.test_outputs(&can, &ind);
+            wago.test_request_inputs(&can);
 
             if i {
                 gpiob.set_pin(board::l432kc::USER_LED_BIT);

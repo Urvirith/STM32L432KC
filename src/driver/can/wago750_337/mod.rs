@@ -40,14 +40,14 @@ impl Wago750 {
     }
     
     /* This is a pure custom implementation due to the nature of the flex I/O as the data packs itself dynamically */
-    pub fn setup(&mut self, msg: &mut CanMsg, bus: &Can) {
+    pub fn setup(&mut self, bus: &Can) {
         // Set Up Node Guarding / PDOs
         if bus.write_pend() {
             match self.step {
                 0 => {      // Initialize The Guard Time
-                    self.setup_guardtime(msg, bus, GUARDTIMEMS);
+                    self.setup_guardtime(bus, GUARDTIMEMS);
                 } 1 => {    // Initialize The Life Factor Time
-                    self.setup_lifefactor(msg, bus, LIFEFACTORMUL);
+                    self.setup_lifefactor(bus, LIFEFACTORMUL);
                 } 2 => {    // Initialize The PDO Rx (Client Recieve) For Current Setup
     
                 } _ => {
@@ -63,9 +63,10 @@ impl Wago750 {
                 An NMT master requests the state of the NMT slave in a cyclical manner. 
                 The time between two requests is the Guard Time. 
     */
-    pub fn setup_guardtime(&mut self, msg: &mut CanMsg, bus: &Can, guardtime: u16) {
+    pub fn setup_guardtime(&mut self, bus: &Can, guardtime: u16) {
+        let mut msg = CanMsg::init();
         // Set The Heartbeat Interval
-        self.co_node.sdo_init_download(sdo::N::Bytes2, sdo::E::Expedited, GUARDTIME, GTLTSI, [((guardtime >> 0) as u8 & BYTEMASK), ((guardtime >> 8) as u8 & BYTEMASK), 0, 0], msg);
+        self.co_node.sdo_init_download(sdo::N::Bytes2, sdo::E::Expedited, GUARDTIME, GTLTSI, [((guardtime >> 0) as u8 & BYTEMASK), ((guardtime >> 8) as u8 & BYTEMASK), 0, 0], &mut msg);
         // Write Heartbeat Interval
         bus.write(msg);
         // Increment Step
@@ -79,9 +80,10 @@ impl Wago750 {
                 longer in normal operation. It then initiates a Life Guarding Event.
                 If the Node Life Time is zero, there is no monitoring.
     */
-    pub fn setup_lifefactor(&mut self, msg: &mut CanMsg, bus: &Can, lifefactortime: u8) {
+    pub fn setup_lifefactor(&mut self, bus: &Can, lifefactortime: u8) {
+        let mut msg = CanMsg::init();
         // Set The Heartbeat Interval
-        self.co_node.sdo_init_download(sdo::N::Bytes3, sdo::E::Expedited, LIFEFACTOR, GTLTSI, [lifefactortime, 0, 0, 0], msg);
+        self.co_node.sdo_init_download(sdo::N::Bytes3, sdo::E::Expedited, LIFEFACTOR, GTLTSI, [lifefactortime, 0, 0, 0], &mut msg);
         // Write Heartbeat Interval
         bus.write(msg);
         // Increment Step
@@ -91,33 +93,37 @@ impl Wago750 {
     /* P.100 Describes The Transmission Of A PDO */
     /* P.117 Describes The Default Mapping For PDO */
     /* P.117 Describes The Default Mapping For PDO */
-    pub fn setup_pdo(&self, msg: &mut CanMsg, bus: &Can) {
+    pub fn setup_pdo(&self, bus: &Can) {
+        let mut msg = CanMsg::init();
 
     }
 
-    pub fn read_node_guarding(&mut self, msg: &mut CanMsg) {
+    pub fn read_node_guarding(&mut self, msg: CanMsg) {
         // Generate The Node Guarding Request
-        self.co_node.nmt_read_heartbeat(msg);
+        self.co_node.nmt_read_heartbeat(&msg);
     }
 
-    pub fn write_node_guarding(&mut self, msg: &mut CanMsg, bus: &Can) {
+    pub fn write_node_guarding(&mut self, bus: &Can) {
+        let mut msg = CanMsg::init();
         // Generate The Node Guarding Request
-        self.co_node.nmt_request_guarding(msg);
+        self.co_node.nmt_request_guarding(&mut msg);
         // Write Node Guarding Request
         bus.write(msg);
     }
     
-    pub fn test_outputs(&self, msg: &mut CanMsg, bus: &Can, ind: &isize) {
-        self.co_node.sdo_init_download(sdo::N::Bytes3, sdo::E::Expedited, DIG8OUTPUTS, SDOIOSI, [1 << ind, 0, 0, 0], msg);
-        bus.write(&msg);
+    pub fn test_outputs(&self, bus: &Can, ind: &isize) {
+        let mut msg = CanMsg::init();
+        self.co_node.sdo_init_download(sdo::N::Bytes3, sdo::E::Expedited, DIG8OUTPUTS, SDOIOSI, [1 << ind, 0, 0, 0], &mut msg);
+        bus.write(msg);
     }
 
-    pub fn test_request_inputs(&self, msg: &mut CanMsg, bus: &Can) {
-        self.co_node.sdo_init_upload(DIG8INPUTS, SDOIOSI, msg);
-        bus.write(&msg);
+    pub fn test_request_inputs(&self, bus: &Can) {
+        let mut msg = CanMsg::init();
+        self.co_node.sdo_init_upload(DIG8INPUTS, SDOIOSI, &mut msg);
+        bus.write(msg);
     }
 
-    pub fn test_read_sdo(&self, msg: &mut CanMsg) -> [u8; 4] {
+    pub fn test_read_sdo(&self, msg: CanMsg) -> [u8; 4] {
         let dogmeat = [0, 0, 0, 0]; // PLACEHOLDER
         //self.node.
 

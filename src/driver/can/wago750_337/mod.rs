@@ -38,6 +38,15 @@ impl Wago750 {
             co_node:    CANOpen::init(node)
         }
     }
+
+    /* Start The Node */
+    pub fn start_node(&self, bus: &Can) {
+        let mut msg = CanMsg::init();
+        /* NMT Write Start */
+        self.co_node.nmt_write_start(&mut msg);
+        // Write Heartbeat Interval
+        bus.write(msg);
+    }
     
     /* This is a pure custom implementation due to the nature of the flex I/O as the data packs itself dynamically */
     pub fn setup(&mut self, bus: &Can) {

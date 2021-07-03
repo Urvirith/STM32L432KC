@@ -21,11 +21,12 @@ const MASK:             u32 = common::MASK_6_BIT;
 const SHIFT:            u32 = 7;
 
 pub const HB:           u32 = 0x0700;   // Heartbeat / Node Guarding COB-ID
+pub const NMT_NODE:     u32 = 0x0000;   // All NMT Command Messages Will Not Have A Node In ID -> COB-ID = 0
 
 impl CANOpen {
     /* Start Remote Node */
     pub fn nmt_write_start(&self, msg: &mut CanMsg) {
-        msg.set_id(self.node, CO_IDE);
+        msg.set_id(NMT_NODE, CO_IDE);
         msg.clr_rtr();
         msg.set_dlc(DLC_NMT);
         msg.set_data([START, self.node as u8 , 0, 0, 0, 0, 0, 0]);
@@ -33,7 +34,7 @@ impl CANOpen {
 
     /* Stop Remote Node */
     pub fn nmt_write_stop(&self, msg: &mut CanMsg) {
-        msg.set_id(self.node, CO_IDE);
+        msg.set_id(NMT_NODE, CO_IDE);
         msg.clr_rtr();
         msg.set_dlc(DLC_NMT);
         msg.set_data([STOP, self.node as u8, 0, 0, 0, 0, 0, 0]);
@@ -41,7 +42,7 @@ impl CANOpen {
 
     /* Pre-Operational Remote Node */
     pub fn nmt_write_preop(&self, msg: &mut CanMsg) {
-        msg.set_id(self.node, CO_IDE);
+        msg.set_id(NMT_NODE, CO_IDE);
         msg.clr_rtr();
         msg.set_dlc(DLC_NMT);
         msg.set_data([PREOP, self.node as u8, 0, 0, 0, 0, 0, 0]);
@@ -49,7 +50,7 @@ impl CANOpen {
 
     /* Reset Remote Node */
     pub fn nmt_write_reset(&self, msg: &mut CanMsg) {
-        msg.set_id(self.node, CO_IDE);
+        msg.set_id(NMT_NODE, CO_IDE);
         msg.clr_rtr();
         msg.set_dlc(DLC_NMT);
         msg.set_data([RESET, self.node as u8, 0, 0, 0, 0, 0, 0]);
@@ -57,7 +58,7 @@ impl CANOpen {
     
     /* Reset Communication Remote Node */
     pub fn nmt_write_comms(&self, msg: &mut CanMsg) {
-        msg.set_id(self.node, CO_IDE);
+        msg.set_id(NMT_NODE, CO_IDE);
         msg.clr_rtr();
         msg.set_dlc(DLC_NMT);
         msg.set_data([COMMS, self.node as u8, 0, 0, 0, 0, 0, 0]);

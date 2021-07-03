@@ -5,6 +5,7 @@ mod board;
 mod hal;
 mod driver;
 mod routine;
+mod setup;
 // mod arm;
 
 /* Set Clock In One Area */
@@ -27,27 +28,13 @@ pub extern fn sys_init() {
 pub extern fn start() {
     let freq = hal::common::range(CLK);
     // Initialize the LED on L432KC board
-    let gpioa = hal::gpio::Gpio::init(board::l432kc::GPIOA_BASE);  
-    let gpiob = hal::gpio::Gpio::init(board::l432kc::GPIOB_BASE);
-    let usart = hal::usart::Usart::init(board::l432kc::USART2_BASE);
-    let can = hal::can::Can::init(board::l432kc::CAN_BASE);
-    let seq_timer = hal::timer::Timer::init(board::l432kc::TIMER2_BASE);
+    let usart       = hal::usart::Usart::init(board::l432kc::USART2_BASE);
+    let can         = hal::can::Can::init(board::l432kc::CAN_BASE);
+    let seq_timer   = hal::timer::Timer::init(board::l432kc::TIMER2_BASE);
+    let mut hb      = setup::Heartbeat::init();
 
-    /* USART Setup */
-    gpioa.otype(board::l432kc::USART2_TX, board::l432kc::USART_MODE, board::l432kc::USART_OTYPE, board::l432kc::USART_AF);
-    gpioa.otype(board::l432kc::USART2_RX, board::l432kc::USART_MODE, board::l432kc::USART_OTYPE, board::l432kc::USART_AF);
-
-    /* CAN Setup */
-    gpioa.otype(board::l432kc::CAN_TX, board::l432kc::CAN_MODE, board::l432kc::CAN_OTYPE, board::l432kc::CAN_AF);
-    gpioa.otype(board::l432kc::CAN_RX, board::l432kc::CAN_MODE, board::l432kc::CAN_OTYPE, board::l432kc::CAN_AF);
-    gpioa.ospeed(board::l432kc::CAN_TX, board::l432kc::CAN_OSPEED);
-    gpioa.ospeed(board::l432kc::CAN_RX, board::l432kc::CAN_OSPEED);
-    gpioa.pupd(board::l432kc::CAN_TX, board::l432kc::CAN_PUPD);
-    gpioa.pupd(board::l432kc::CAN_RX, board::l432kc::CAN_PUPD);
-
-    /* LED */
-    gpiob.otype(board::l432kc::USER_LED, board::l432kc::USER_LED_MODE, board::l432kc::USER_LED_OTYPE, board::l432kc::USER_LED_AF);
-
+    setup::gpio_setup();
+    
     seq_timer.open(hal::timer::TimerType::Cont, hal::timer::Direction::Upcount);
     seq_timer.set_scl(50, freq, 100);
     seq_timer.start();
@@ -57,32 +44,26 @@ pub extern fn start() {
     can.open(&ci);
     can.filter_init(0, false, false, true, 0);
 
-    //let dogmeat = [0x44, 0x6F, 0x67, 0x6D, 0x65, 0x61, 0x74, 0x0D];
-
-    /* CANOpen Master */
-    let co_mst = driver::can::canopen::CANOpen::init(0);
     let wago = driver::can::wago750_337::Wago750::init(1);
 
-    let mut msg = hal::can::CanMsg::init();
+    wago.start_node(&can);
 
-    co_mst.nmt_write_start(&mut msg);
-    let result = can.write(msg);
-
-    if result { // CHECK IF WRITE IS GOOD
-        usart.write(&[0x44, 0x01, 0x01, 0x0D]);
-    } else {
-        usart.write(&[0x44, 0x01, 0x00, 0x0D]);
-    }
-
-    let mut i = false;
     let mut ind = 0;
+    let mut i = 1;
 
     loop {
-        while can.read_pend() & !seq_timer.get_flag() {
+
+        while can.read_pend() {
             let msgr = can.read();
-            usart.write(&[0x44, 0x06, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
+            usart.write(&[0x44, i, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
+            if i < 250 {
+                i = 1;
+            }
+            i += 1;
         }
         
+        i = 1;
+
         if seq_timer.get_flag() {
             if ind > 7 {
                 ind = 0;
@@ -91,13 +72,7 @@ pub extern fn start() {
             wago.test_outputs(&can, &ind);
             wago.test_request_inputs(&can);
 
-            if i {
-                gpiob.set_pin(board::l432kc::USER_LED_BIT);
-                i = false;
-            } else {
-                gpiob.clr_pin(board::l432kc::USER_LED_BIT);
-                i = true;
-            }
+            hb.heartbeat();
             
             ind += 1;
             seq_timer.clr_flag();

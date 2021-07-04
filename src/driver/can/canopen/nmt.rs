@@ -17,7 +17,7 @@ const DLC_RTR:          u32 = 0x00;     // NMT Heartbeat RTR
 const CO_IDE:           bool = false;   // CANOpen supports 1 -127 nodes
 
 const HB_MASK:          u32 = common::MASK_1_BIT;
-const MASK:             u32 = common::MASK_6_BIT;
+const MASK:             u32 = common::MASK_7_BIT;
 const SHIFT:            u32 = 7;
 
 pub const HB:           u32 = 0x0700;   // Heartbeat / Node Guarding COB-ID
@@ -65,7 +65,7 @@ impl CANOpen {
     }
 
     /* Heartbeat / Guarding Consumer */
-    pub fn nmt_read_heartbeat(&mut self, msg: &CanMsg) {
+    pub fn nmt_read_heartbeat(&mut self, msg: &CanMsg) -> u8 {
         let data = msg.get_data()[0];
         
         if ((data  >> SHIFT) & HB_MASK as u8) == 1 {
@@ -76,6 +76,7 @@ impl CANOpen {
 
         let state = data & MASK as u8;
         self.state = canopen::canopen_state(state);
+        return data & MASK as u8;
     }
 
     /* Heartbeat Producer */
@@ -88,7 +89,7 @@ impl CANOpen {
 
     /* Guarding */
     /* Is A Client Server - Request Response Of Heartbeat, Can Be Used To read The State */
-    pub fn nmt_request_guarding(&mut self, msg: &mut CanMsg) {       
+    pub fn nmt_request_guarding(&self, msg: &mut CanMsg) {       
         msg.set_id(HB + self.node, CO_IDE);
         msg.set_rtr();
         msg.set_dlc(DLC_RTR);
@@ -98,7 +99,7 @@ impl CANOpen {
     /* Guarding */
     /* Is a Client Server - This Is The Server Response Of Its Own State */
     pub fn nmt_response_guarding(&mut self, msg: &mut CanMsg) {
-        let mut hb = 0;
+        let hb;
 
         if self.toggle { // Generate a heartbeat signal for the 7 bit in the first byte of data
             hb = 1 << SHIFT;

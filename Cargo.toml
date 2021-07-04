@@ -12,13 +12,13 @@ crate-type = ["staticlib"]
 panic = "abort"
 
 [profile.release]
-panic = "abort"
+# panic = "abort"
 # Optimize for size
-opt-level = 'z'
+# opt-level = 'z'
 # Optimize At Link Stage
- lto = true
+# lto = true
 # Increase Compile Time For Smaller Size             
- codegen-units = 1
+# codegen-units = 1
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

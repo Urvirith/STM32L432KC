@@ -4,33 +4,34 @@
 /* General Functions */
 
 pub mod sdo;
+pub mod pdo;
 pub mod nmt;
 
 use crate::hal::{can::CanMsg};
 
 /* State Commands For CANOpen */
-const BOOTUP:           u8 = 0x00;      // Boot up (Initialising)
-const STOPPED:          u8 = 0x04;      // Stopped State
-const OPERATIONAL:      u8 = 0x05;      // Operationall State
-const PREOPERATION:     u8 = 0x7F;      // Pre-Operational State
-const UNKNOWN:          u8 = 0xFF;      // Unknown State
+pub const BOOTUP:       u8 = 0x00;      // Boot up (Initialising)
+pub const STOPPED:      u8 = 0x04;      // Stopped State
+pub const OPERATIONAL:  u8 = 0x05;      // Operationall State
+pub const PREOPERATION: u8 = 0x7F;      // Pre-Operational State
+pub const UNKNOWN:      u8 = 0xFF;      // Unknown State
 
 /* Function Codes For CANOpen */
-const NMT:              u32 = 0x0000;   // Network Management 
-const SYNC:             u32 = 0x0080;   // Synchronization
-const EMCY:             u32 = 0x0080;   // Emergency
-const TIME:             u32 = 0x0100;   // Timestamp
-const TPDO1:            u32 = 0x0180;   // Process Data Object
-const RPDO1:            u32 = 0x0200;   // Process Data Object
-const TPDO2:            u32 = 0x0280;   // Process Data Object
-const RPDO2:            u32 = 0x0300;   // Process Data Object
-const TPDO3:            u32 = 0x0380;   // Process Data Object
-const RPDO3:            u32 = 0x0400;   // Process Data Object
-const TPDO4:            u32 = 0x0480;   // Process Data Object
-const RPDO4:            u32 = 0x0500;   // Process Data Object
-const TSDO:             u32 = 0x0580;   // Service Data Object
-const RSDO:             u32 = 0x0600;   // Service Data Object
-const HEARTBEAT:        u32 = 0x0700;   // Node Monitoring (Heartbeat)
+pub const NMT:          u32 = 0x0000;   // Network Management 
+pub const SYNC:         u32 = 0x0080;   // Synchronization
+pub const EMCY:         u32 = 0x0080;   // Emergency
+pub const TIME:         u32 = 0x0100;   // Timestamp
+pub const TPDO1:        u32 = 0x0180;   // Process Data Object
+pub const RPDO1:        u32 = 0x0200;   // Process Data Object
+pub const TPDO2:        u32 = 0x0280;   // Process Data Object
+pub const RPDO2:        u32 = 0x0300;   // Process Data Object
+pub const TPDO3:        u32 = 0x0380;   // Process Data Object
+pub const RPDO3:        u32 = 0x0400;   // Process Data Object
+pub const TPDO4:        u32 = 0x0480;   // Process Data Object
+pub const RPDO4:        u32 = 0x0500;   // Process Data Object
+pub const TSDO:         u32 = 0x0580;   // Service Data Object
+pub const RSDO:         u32 = 0x0600;   // Service Data Object
+pub const HEARTBEAT:    u32 = 0x0700;   // Node Monitoring (Heartbeat)
 
 /* Function Code And Node Masks */
 const NODE_MASK:        u32 = 0x007F;   // Standard ID, Node Mask (Not Extended)
@@ -75,6 +76,12 @@ impl CANOpen {
     }
 
     /* Get The Node Of The Remote Message - Standard ID Only */
+    /* Used Externally To Get The Node Number, Or A Mask Can Applied At Higher Logic */
+    pub fn get_ext_node(cob_id: u32) -> u32 {
+        return cob_id & NODE_MASK;
+    }
+
+    /* Get The Node Of The Remote Message - Standard ID Only */
     /* Used Against The Master To Get The Node Number, Or A Mask Can Applied At Higher Logic */
     pub fn get_source_node(&self, cob_id: u32) -> u32 {
         return cob_id & NODE_MASK;
@@ -94,6 +101,10 @@ impl CANOpen {
     /* Obtain Own State */
     pub fn get_state(&self) -> CANOpenState {
         return self.state;
+    }
+
+    pub fn get_state_u8(&self) -> u8 {
+        return canopen_state_val(self.state);
     }
 
     /* Set Internal State */

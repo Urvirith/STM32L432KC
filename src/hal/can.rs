@@ -482,7 +482,7 @@ impl Can {
     }
 
     /* Verify If There Is a Free Area To Write */
-    pub fn write_pend(&self) -> bool {
+    pub fn write_free(&self) -> bool {
         if pointer::get_ptr_vol_bit_u32(self.tsr, TME0_BIT) { 
             return true;
         } else if pointer::get_ptr_vol_bit_u32(self.tsr, TME1_BIT) {

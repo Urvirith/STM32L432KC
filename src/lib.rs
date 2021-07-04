@@ -36,7 +36,7 @@ pub extern fn start() {
     setup::gpio_setup();
     
     seq_timer.open(hal::timer::TimerType::Cont, hal::timer::Direction::Upcount);
-    seq_timer.set_scl(50, freq, 100);
+    seq_timer.set_scl(500, freq, 1000);
     seq_timer.start();
 
     usart.open(hal::usart::WordLen::Bits8, hal::usart::StopLen::StopBit1, hal::usart::BaudRate::Baud921600, freq, hal::usart::OverSample::Oversample16);
@@ -44,19 +44,21 @@ pub extern fn start() {
     can.open(&ci);
     can.filter_init(0, false, false, true, 0);
 
-    let wago = driver::can::wago750_337::Wago750::init(1);
+    let mut wago = driver::can::wago750_337::Wago750::init(1);
 
-    wago.start_node(&can);
+    //wago.start_node(&can);
 
     let mut ind = 0;
     let mut i = 1;
 
     loop {
-
         while can.read_pend() {
             let msgr = can.read();
-            usart.write(&[0x44, i, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
-            if i < 250 {
+            let node = driver::can::canopen::CANOpen::get_ext_node(msgr.get_id());
+            usart.write(&[0x44, i, node as u8, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
+            wago.read_message(msgr);
+
+            if i > 250 {
                 i = 1;
             }
             i += 1;
@@ -69,8 +71,18 @@ pub extern fn start() {
                 ind = 0;
             }
 
-            wago.test_outputs(&can, &ind);
-            wago.test_request_inputs(&can);
+            usart.write(&[0x44, 0x01, wago.test_get_state(), 0x0D]);
+            /* SET STATE SHOULD BE SET LOWER INTERNAL TO THE WAGO */
+            wago.set_state(&can);
+            wago.write_node_guarding(&can);
+            wago.setup_wago(&can);
+            if wago.setup_complete() {
+                let analogue1 = ind as u16 * 4096;
+                let analogue2 = ind as u16 * 100;
+                wago.write_mapped_outputs([1 << ind, (analogue1 >> 0) as u8, (analogue1 >> 8) as u8, (analogue2 >> 0) as u8, (analogue2 >> 8) as u8, 0, 0, 0], &can);
+            }
+            //wago.test_outputs(&can, &ind);
+            //wago.test_request_inputs(&can);
 
             hb.heartbeat();
             

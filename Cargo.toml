@@ -12,7 +12,7 @@ crate-type = ["staticlib"]
 panic = "abort"
 
 [profile.release]
-# panic = "abort"
+panic = "abort"
 # Optimize for size
 # opt-level = 'z'
 # Optimize At Link Stage

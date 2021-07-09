@@ -14,10 +14,17 @@ use crate::hal::{common, spi::Spi};
 /* Masks */
 const ADDRESS_MASK:         u8 = 0x3F;
 const ADDRESS_BYTE_MASK:    u8 = 0xFE;
+const FIFO_LENGTH_MASK:     u8 = common::MASK_7_BIT as u8;
 
 /* Offsets */
 const ADDRESS_OFFSET:       u8 = 1;
 const READ_OFFSET:          u8 = 7;
+const FIFO_FLUSH:           u8 = 7; // BIT TO FLUSH THE DATA REGISTER
+
+/* Addresses */
+const FIFODATA:             u8 = 0x09;
+const FIFOLEN:              u8 = 0x0A;
+
 
 struct Rc522 {
     step: u8,

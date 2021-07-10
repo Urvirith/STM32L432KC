@@ -41,15 +41,26 @@ impl Rc522 {
     }
 
 
-    pub fn read(&self, addr: u8) {
-
+    pub fn read(&self, addr: u8, buf: &mut [u8], len: usize) -> bool {
+        self.bus.enable();
+        self.bus.write_byte(self.form_address(addr, true));
+        if self.bus.read(buf, len) > 0 {
+            self.bus.disable();
+            return true;
+        } else {
+            self.bus.disable();
+            return false;
+        };
     }
 
     pub fn write(&self, addr: u8, data: &[u8]) {
-
+        self.bus.enable();
+        self.bus.write_byte(self.form_address(addr, false));
+        self.bus.write(data);
+        self.bus.disable();
     }
 
-    fn form_address(addr: u8, read: bool) -> u8 {
+    fn form_address(&self, addr: u8, read: bool) -> u8 {
         let mut address = (addr & ADDRESS_MASK) << ADDRESS_OFFSET;
 
         if read {

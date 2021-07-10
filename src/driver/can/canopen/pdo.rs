@@ -1,7 +1,7 @@
 /* Process Data Object */
 
 use super::CANOpen;
-use crate::hal::{common, can::CanMsg};
+use crate::hal::{can::CanMsg};
 
 
 impl CANOpen {

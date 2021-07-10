@@ -39,7 +39,7 @@ const TXPDO1:               u16 = 0x1800;
 const TXPDO1DISABLECOBID:   u8 =  0x80;     // ALIGN TO THE LAST BYTE TO DISABLE THE TXPDO FOR WRITING
 const TXPDO1SI2:            u8 =  0xFF;     // Set To Change Of State
 const TXPDO1SI3:            u16 = 0x012C;   // Set To 30 ms Interval Inhibit Time
-const TXPDO1SI5:            u16 = 0x32;     // Set To 50 ms Interval Inhibit Time
+const TXPDO1SI5:            u16 = 0x764;    // Set To 50 ms Interval Event Time
 
 impl Wago750 {
     /* This is a pure custom implementation due to the nature of the flex I/O as the data packs itself dynamically */
@@ -158,7 +158,19 @@ impl Wago750 {
         self.write_bus_step(bus, msg);
     }
 
+    fn setup_tpdo1_analogue1status(&mut self, bus: &Can) { /* Implement */
+        let mut msg = CanMsg::init();
+        self.co_node.sdo_init_download(sdo::N::Bytes0, sdo::E::Expedited, TPDO1, 2, self.pdo_mapping_structure(TPDO1ANALOGIN, TPDO1ANALOGIN1SI, TPDO1ANALOGBITS), &mut msg);
+        self.write_bus_step(bus, msg);
+    }
+
     fn setup_tpdo1_analogue1input(&mut self, bus: &Can) {
+        let mut msg = CanMsg::init();
+        self.co_node.sdo_init_download(sdo::N::Bytes0, sdo::E::Expedited, TPDO1, 2, self.pdo_mapping_structure(TPDO1ANALOGIN, TPDO1ANALOGIN1SI, TPDO1ANALOGBITS), &mut msg);
+        self.write_bus_step(bus, msg);
+    }
+
+    fn setup_tpdo1_analogue2status(&mut self, bus: &Can) { /* Implement */
         let mut msg = CanMsg::init();
         self.co_node.sdo_init_download(sdo::N::Bytes0, sdo::E::Expedited, TPDO1, 2, self.pdo_mapping_structure(TPDO1ANALOGIN, TPDO1ANALOGIN1SI, TPDO1ANALOGBITS), &mut msg);
         self.write_bus_step(bus, msg);

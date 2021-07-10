@@ -55,7 +55,14 @@ pub extern fn start() {
         while can.read_pend() {
             let msgr = can.read();
             let node = driver::can::canopen::CANOpen::get_ext_node(msgr.get_id());
-            usart.write(&[0x44, i, node as u8, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
+            if (msgr.get_id() >> 8) as u8 == 01 {
+                let analogue1 = ((msgr.get_data()[1] as u16) << 0) | ((msgr.get_data()[2] as u16) << 8);
+                let analogue2 = ((msgr.get_data()[3] as u16) << 0) | ((msgr.get_data()[4] as u16) << 8);
+                let anscale1 = scale(analogue1 as u32, 0, 32761, 0, 100);
+                let anscale2 = scale(analogue2 as u32, 0, 32761, 0, 100);
+                usart.write(&[0x44, i, node as u8, msgr.get_data()[0], (analogue1 >> 8) as u8, (analogue1 >> 0) as u8, (analogue2 >> 8) as u8, (analogue2 >> 0) as u8, anscale1 as u8, anscale2 as u8, 0x0D]);
+                //usart.write(&[0x44, i, node as u8, (msgr.get_id() >> 24) as u8, (msgr.get_id() >> 16) as u8, (msgr.get_id() >> 8) as u8, (msgr.get_id() >> 0) as u8, msgr.get_data()[0], msgr.get_data()[1], msgr.get_data()[2], msgr.get_data()[3], msgr.get_data()[4], msgr.get_data()[5], msgr.get_data()[6], msgr.get_data()[7], 0x0D]);
+            }
             wago.read_message(msgr);
 
             if i > 250 {
@@ -71,14 +78,13 @@ pub extern fn start() {
                 ind = 0;
             }
 
-            usart.write(&[0x44, 0x01, wago.test_get_state(), 0x0D]);
             /* SET STATE SHOULD BE SET LOWER INTERNAL TO THE WAGO */
             wago.set_state(&can);
             wago.write_node_guarding(&can);
             wago.setup_wago(&can);
             if wago.setup_complete() {
                 let analogue1 = ind as u16 * 4096;
-                let analogue2 = ind as u16 * 100;
+                let analogue2 = ind as u16 * 2048;
                 wago.write_mapped_outputs([1 << ind, (analogue1 >> 0) as u8, (analogue1 >> 8) as u8, (analogue2 >> 0) as u8, (analogue2 >> 8) as u8, 0, 0, 0], &can);
             }
             //wago.test_outputs(&can, &ind);
@@ -101,4 +107,14 @@ pub extern "C" fn __aeabi_unwind_cpp_pr0() {
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
+}
+
+pub fn scale (in_val: u32, in_low: u32, in_high: u32, out_low: u32, out_high: u32) -> u32 {
+    if in_val > in_low { // If in value in lower than the low scale value, return 0 as signal is bad
+        let in_scale = in_high - in_low;
+        let out_scale = out_high - out_low;
+        return (((in_val - in_low) * out_scale) / in_scale) + out_low;
+    } else {
+        return 0;
+    }
 }

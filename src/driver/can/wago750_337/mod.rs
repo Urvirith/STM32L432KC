@@ -7,8 +7,8 @@
     750_408 Discrete Module In NPN (24v Sourcing)
     750_504 Discrete Module Out (24v Sourcing)
     750_504 Discrete Module Out (24v Sourcing)
-    750_454 Analogue Module In  (4-20mA Sinking)
     750_554 Analogue Module Out (4-20mA Sinking)
+    750_454 Analogue Module In  (4-20mA Sinking)
 */
 
 

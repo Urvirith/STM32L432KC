@@ -37,7 +37,7 @@ pub enum ClockSetup {RisingEdgeClockLow, FallingEdgeClockLow, RisingEdgeClockHig
 // Least Significant Bit First, Most Significiant Bit First
 pub enum BitFirst {Lsb, Msb}
 
-// BR: Baud rate control 000: fPCLK/2 001: fPCLK/4 010: fPCLK/8 011: fPCLK/16 100: fPCLK/32 101: fPCLK/64 110: fPCLK/128 111: fPCLK/256
+// BR: Baud Rate Control 000: fPCLK/2 001: fPCLK/4 010: fPCLK/8 011: fPCLK/16 100: fPCLK/32 101: fPCLK/64 110: fPCLK/128 111: fPCLK/256
 pub enum BaudRateDiv {Clk2, Clk4, Clk8, Clk16, Clk32, Clk64, Clk128, Clk256}
 
 // These bits configure the data length for SPI transfers.
@@ -235,8 +235,11 @@ impl Spi {
             if i < buf.len() {
                 buf[i] = pointer::get_ptr_vol_raw_u8(self.dr); // Will need to be changed if handling 16 bit words etc
                 i += 1;
-            } else {
-                return 0x77;
+            } // Possible Need To Put Else Return here....
+
+            // Return if i = len and len is set, possible to return terminating char if needed or pin pointer
+            if ((i >= len) && (len > 0)) || i >= buf.len() { 
+                return i;
             }
 
             if self.error() {
@@ -247,7 +250,7 @@ impl Spi {
                 while !pointer::get_ptr_vol_bit_u32(self.sr, RXNE_BIT) {
                     // SPIN WHILE THE RXNE IS NOT EMPTY, DUMP OUT IF ISSUE COMES UP
                     if f > TIMEOUT {
-                        return 0x78;
+                        return 0;
                     }
                     f+=1;
                 }
@@ -278,11 +281,19 @@ impl Spi {
     }
 
     /* Write A Single Byte Of Data */
-    pub fn write_byte(&self, buf: u8) {
+    pub fn write_byte(&self, buf: u8) -> bool {
+        let mut i = 0;
         // Wait For FIFO To Free Before Writing Data To The Buffer
-        while pointer::get_ptr_vol_u32(self.sr, FTLVL_OFFSET, FTLVL_MASK) == 3 {
-            pointer::set_ptr_vol_raw_u8(self.dr, buf);
+        while !pointer::get_ptr_vol_bit_u32(self.sr, TXE_BIT) {
+            if i > TIMEOUT {
+                return false;
+            }
+            i+=1;
         }
+
+        pointer::set_ptr_vol_raw_u8(self.dr, buf);
+
+        return true;
     }
 
     //  The correct disable procedure is (except when receive only mode is used):

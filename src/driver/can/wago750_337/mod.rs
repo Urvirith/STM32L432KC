@@ -13,13 +13,9 @@
 
 
 use crate::hal::{can::CanMsg, can::Can, common};
-use super::canopen::{CANOpen, sdo};
+use super::canopen::{CANOpen};
 use super::canopen;
 pub mod setup;
-
-const DIG8OUTPUTS:      u16 = 0x6200; 
-const DIG8INPUTS:       u16 = 0x6000;
-const SDOIOSI:          u8  = 0x01;
 
 pub struct Wago750 {
     step:       u8,
@@ -85,37 +81,6 @@ impl Wago750 {
             bus.write(msg);
         }
     }
-
-    pub fn test_get_state(&self) -> u8 {
-        return self.co_node.get_state_u8();
-    }
-
-    /* Start The Node */
-    pub fn start_node(&self, bus: &Can) {
-        let mut msg = CanMsg::init();
-        /* NMT Write Start */
-        self.co_node.nmt_write_start(&mut msg);
-        // Write Heartbeat Interval
-        bus.write(msg);
-    }
-
-    /* Set The Node To Preoperational */
-    pub fn preop_node(&self, bus: &Can) {
-        let mut msg = CanMsg::init();
-        /* NMT Write Start */
-        self.co_node.nmt_write_preop(&mut msg);
-        // Write Heartbeat Interval
-        bus.write(msg);
-    }
-
-    /* Start The Node */
-    pub fn reset_node(&self, bus: &Can) {
-        let mut msg = CanMsg::init();
-        /* NMT Write Start */
-        self.co_node.nmt_write_comms(&mut msg);
-        // Write Heartbeat Interval
-        bus.write(msg);
-    }
     
     pub fn read_node_guarding(&mut self, msg: CanMsg) -> u8 {
         // Generate The Node Guarding Request
@@ -133,25 +98,6 @@ impl Wago750 {
         let mut msg = CanMsg::init();
         self.co_node.pdo_write(canopen::RPDO1, 5, data, &mut msg);
         bus.write(msg);
-    }
-
-    pub fn test_outputs(&self, bus: &Can, ind: &isize) {
-        let mut msg = CanMsg::init();
-        self.co_node.sdo_init_download(sdo::N::Bytes3, sdo::E::Expedited, DIG8OUTPUTS, SDOIOSI, [1 << ind, 0, 0, 0], &mut msg);
-        bus.write(msg);
-    }
-
-    pub fn test_request_inputs(&self, bus: &Can) {
-        let mut msg = CanMsg::init();
-        self.co_node.sdo_init_upload(DIG8INPUTS, SDOIOSI, &mut msg);
-        bus.write(msg);
-    }
-
-    pub fn test_read_sdo(&self, msg: CanMsg) -> [u8; 4] {
-        let dogmeat = [0, 0, 0, 0]; // PLACEHOLDER
-        //self.node.
-
-        return dogmeat;
     }
 
     fn pdo_mapping_structure(&self, index: u32, subindex: u32, bit_len: u32) -> [u8; 4] {

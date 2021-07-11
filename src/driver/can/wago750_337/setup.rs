@@ -86,9 +86,7 @@ impl Wago750 {
                     };
                 }
             } _ => {
-                if !self.setup {
-                    self.preop_node(bus);
-                } 
+                // DUMMY AREA, SHOULD SET UP AUTOMATICALLY WITH OUT THIS
             }
         }
     }

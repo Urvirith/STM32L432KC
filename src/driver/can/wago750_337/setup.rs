@@ -158,19 +158,7 @@ impl Wago750 {
         self.write_bus_step(bus, msg);
     }
 
-    fn setup_tpdo1_analogue1status(&mut self, bus: &Can) { /* Implement */
-        let mut msg = CanMsg::init();
-        self.co_node.sdo_init_download(sdo::N::Bytes0, sdo::E::Expedited, TPDO1, 2, self.pdo_mapping_structure(TPDO1ANALOGIN, TPDO1ANALOGIN1SI, TPDO1ANALOGBITS), &mut msg);
-        self.write_bus_step(bus, msg);
-    }
-
     fn setup_tpdo1_analogue1input(&mut self, bus: &Can) {
-        let mut msg = CanMsg::init();
-        self.co_node.sdo_init_download(sdo::N::Bytes0, sdo::E::Expedited, TPDO1, 2, self.pdo_mapping_structure(TPDO1ANALOGIN, TPDO1ANALOGIN1SI, TPDO1ANALOGBITS), &mut msg);
-        self.write_bus_step(bus, msg);
-    }
-
-    fn setup_tpdo1_analogue2status(&mut self, bus: &Can) { /* Implement */
         let mut msg = CanMsg::init();
         self.co_node.sdo_init_download(sdo::N::Bytes0, sdo::E::Expedited, TPDO1, 2, self.pdo_mapping_structure(TPDO1ANALOGIN, TPDO1ANALOGIN1SI, TPDO1ANALOGBITS), &mut msg);
         self.write_bus_step(bus, msg);

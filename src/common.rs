@@ -1,6 +1,5 @@
 /* Common PLC functions, SCL for example */
-
-pub fn scale = (in_val: u16, in_low: u16, in_high: u16, out_low: u16, out_high: u16) -> u16 {
+pub fn scale (in_val: u32, in_low: u32, in_high: u32, out_low: u32, out_high: u32) -> u32 {
     if in_val > in_low { // If in value in lower than the low scale value, return 0 as signal is bad
         let in_scale = in_high - in_low;
         let out_scale = out_high - out_low;

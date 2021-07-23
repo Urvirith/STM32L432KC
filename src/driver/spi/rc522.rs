@@ -12,7 +12,7 @@
 use crate::hal::{common, spi::Spi};
 
 /* Masks */
-const ADDRESS_MASK:         u8 = 0x3F;
+const ADDRESS_MASK:         u8 = common::MASK_6_BIT as u8;
 const ADDRESS_BYTE_MASK:    u8 = 0xFE;
 const FIFO_LENGTH_MASK:     u8 = common::MASK_7_BIT as u8;
 
@@ -21,9 +21,11 @@ const ADDRESS_OFFSET:       u8 = 1;
 const READ_OFFSET:          u8 = 7;
 const FIFO_FLUSH:           u8 = 7; // BIT TO FLUSH THE DATA REGISTER
 
-/* Addresses */
+/* Registers */
+const STATUS1REG:           u8 = 0x07;
 const FIFODATA:             u8 = 0x09;
 const FIFOLEN:              u8 = 0x0A;
+const VERSION:              u8 = 0x37;  // MFRC522 VERSION 1 0x91, VERSION 2 0x92 
 
 
 struct Rc522 {
@@ -40,6 +42,9 @@ impl Rc522 {
         };
     }
 
+    pub fn get_version(&self, buf: &mut [u8]) {
+        self.read(VERSION, buf, 1);
+    }
 
     pub fn read(&self, addr: u8, buf: &mut [u8], len: usize) -> bool {
         self.bus.enable();
@@ -69,6 +74,6 @@ impl Rc522 {
             address &= !(1 << READ_OFFSET);
         }
 
-        return address;
+        return address & ADDRESS_BYTE_MASK;
     }
 }

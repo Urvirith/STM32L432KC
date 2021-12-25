@@ -44,7 +44,7 @@ $(BIN_DIR)/main.elf: $(LINK_DIR)/gcc_arm.ld $(BIN_DIR)/main.o $(BIN_DIR)/startup
 	$(LD) -Os -s $(LDFLAGS) $^ -o $@
 
 # Build Dependances
-$(BIN_DIR)/startup.o: $(START_DIR)/startup_ARMCM4.S
+$(BIN_DIR)/startup.o: $(START_DIR)/startup_ARMCM4.s
 	$(AS) $< $(ASFLAGS) -o $@
 
 # Build The Rust Project, .cargo and Cargo.Toml hold the flags for this

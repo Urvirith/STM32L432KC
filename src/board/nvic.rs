@@ -1,5 +1,5 @@
-// NVIC Description - is on pg 529
-// NVIC Registers (Programming Manual) - is on 178
+// NVIC Description - is on pg 320
+// NVIC Registers (Programming Manual) - is on 320
 
 /* Nested vectored interrupt controller (NVIC) */
 

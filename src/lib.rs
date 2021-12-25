@@ -2,7 +2,7 @@
 
 use core::panic::PanicInfo;
 mod board;
-mod hal;
+mod stm32hal;
 mod driver;
 mod routine;
 mod setup;
@@ -10,12 +10,12 @@ mod common;
 // mod arm;
 
 /* Set Clock In One Area */
-const CLK:          hal::common::MsiRange = hal::common::MsiRange::Clk16MHz;
+const CLK:          stm32hal::common::MsiRange = stm32hal::common::MsiRange::Clk16MHz;
 
 #[no_mangle]
 pub extern fn sys_init() {
     /* RCC Enabling of the bus */
-    let rcc = hal::rcc::Rcc::init(board::l432kc::RCC_BASE);
+    let rcc = stm32hal::rcc::Rcc::init(board::l432kc::RCC_BASE);
 
     rcc.write_msi_range(CLK);
     rcc.write_ahb2_enr(board::l432kc::GPIOA_RCC_AHB2_ENABLE);
@@ -27,21 +27,21 @@ pub extern fn sys_init() {
 
 #[no_mangle]
 pub extern fn start() {
-    let freq = hal::common::range(CLK);
+    let freq = stm32hal::common::range(CLK);
     // Initialize the LED on L432KC board
-    let usart       = hal::usart::Usart::init(board::l432kc::USART2_BASE);
-    let can         = hal::can::Can::init(board::l432kc::CAN_BASE);
-    let seq_timer   = hal::timer::Timer::init(board::l432kc::TIMER2_BASE);
+    let usart       = stm32hal::usart::Usart::init(board::l432kc::USART2_BASE);
+    let can         = stm32hal::can::Can::init(board::l432kc::CAN_BASE);
+    let seq_timer   = stm32hal::timer::Timer::init(board::l432kc::TIMER2_BASE);
     let mut hb      = setup::Heartbeat::init();
 
     setup::gpio_setup();
     
-    seq_timer.open(hal::timer::TimerType::Cont, hal::timer::Direction::Upcount);
+    seq_timer.open(stm32hal::timer::TimerType::Cont, stm32hal::timer::Direction::Upcount);
     seq_timer.set_scl(500, freq, 1000);
     seq_timer.start();
 
-    usart.open(hal::usart::WordLen::Bits8, hal::usart::StopLen::StopBit1, hal::usart::BaudRate::Baud921600, freq, hal::usart::OverSample::Oversample16);
-    let ci = hal::can::CanInit::init();
+    usart.open(stm32hal::usart::WordLen::Bits8, stm32hal::usart::StopLen::StopBit1, stm32hal::usart::BaudRate::Baud921600, freq, stm32hal::usart::OverSample::Oversample16);
+    let ci = stm32hal::can::CanInit::init();
     can.open(&ci);
     can.filter_init(0, false, false, true, 0);
 

@@ -1,5 +1,5 @@
 use super::Wago750;
-use crate::hal::{can::CanMsg, can::Can};
+use crate::stm32hal::{can::CanMsg, can::Can};
 use super::canopen::{sdo};
 use super::canopen;
 

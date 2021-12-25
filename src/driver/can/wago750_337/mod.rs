@@ -12,7 +12,7 @@
 */
 
 
-use crate::hal::{can::CanMsg, can::Can, common};
+use crate::stm32hal::{can::CanMsg, can::Can, common};
 use super::canopen::{CANOpen};
 use super::canopen;
 pub mod setup;

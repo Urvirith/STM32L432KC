@@ -1,7 +1,7 @@
 /* Service Data Object */
 /* SDO Is A Client / Server Type */
 use super::CANOpen;
-use crate::hal::{common, can::CanMsg};
+use crate::stm32hal::{common, can::CanMsg};
 
 const IDE:              bool = false;   // CANOpen only uses normal ID
 

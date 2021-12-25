@@ -2,7 +2,7 @@
 /* NMT Can Only Be Used As A Master */
 
 use super::CANOpen;
-use crate::hal::{can::CanMsg, common};
+use crate::stm32hal::{can::CanMsg, common};
 use crate::driver::can::canopen;
 
 /* Local Const To Form The Message */

@@ -1,4 +1,4 @@
-use crate::hal::{common, gpio, usart};
+use crate::stm32hal::{common, gpio, usart};
 
 /* Register Base */
 /* Reset and Clock Control (RCC) */

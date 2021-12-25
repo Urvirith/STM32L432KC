@@ -7,7 +7,7 @@ pub mod sdo;
 pub mod pdo;
 pub mod nmt;
 
-use crate::hal::{can::CanMsg};
+use crate::stm32hal::{can::CanMsg};
 
 /* State Commands For CANOpen */
 pub const BOOTUP:       u8 = 0x00;      // Boot up (Initialising)

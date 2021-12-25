@@ -9,7 +9,7 @@
     RST                 - Driven High To Reset And Enable Module, Low To Shut The Module Down
 */
 
-use crate::hal::{common, spi::Spi};
+use crate::stm32hal::{common, spi::Spi};
 
 /* Masks */
 const ADDRESS_MASK:         u8 = common::MASK_6_BIT as u8;

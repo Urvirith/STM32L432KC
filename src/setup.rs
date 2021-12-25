@@ -1,11 +1,11 @@
 
 use crate::board;
-use crate::hal;
+use crate::stm32hal;
 
 /* Set Up Area For All GPIO Move To Own Area */
 pub fn gpio_setup() {
-    let gpioa       = hal::gpio::Gpio::init(board::l432kc::GPIOA_BASE);  
-    let gpiob       = hal::gpio::Gpio::init(board::l432kc::GPIOB_BASE);
+    let gpioa       = stm32hal::gpio::Gpio::init(board::l432kc::GPIOA_BASE);  
+    let gpiob       = stm32hal::gpio::Gpio::init(board::l432kc::GPIOB_BASE);
 
     /* USART Setup */
     gpioa.otype(board::l432kc::USART2_TX, board::l432kc::USART_MODE, board::l432kc::USART_OTYPE, board::l432kc::USART_AF);
@@ -26,14 +26,14 @@ pub fn gpio_setup() {
 /* Heartbeat Area For LED To Inform User Of Cyclic Operation Of The Processor */
 pub struct Heartbeat {
     toggle: bool,
-    gpio:   hal::gpio::Gpio
+    gpio:   stm32hal::gpio::Gpio
 }
 
 impl Heartbeat {
     pub fn init() -> Heartbeat {
         return Heartbeat {
             toggle: false,
-            gpio:   hal::gpio::Gpio::init(board::l432kc::GPIOB_BASE)
+            gpio:   stm32hal::gpio::Gpio::init(board::l432kc::GPIOB_BASE)
         }
     }
 

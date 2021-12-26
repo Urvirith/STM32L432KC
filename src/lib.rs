@@ -47,7 +47,7 @@ pub extern "C" fn start() {
     int_timer.delay(1000, freq, 500);
 
     nvic.set_interrupt(board::l432kc::NvicIrq::TIM7_IRQ as u32);
-    int_timer.set_scl(1000, freq, 1000);
+    int_timer.set_scl(1000, freq, 500);
     seq_timer.start();
     int_timer.start();
 
@@ -89,10 +89,10 @@ pub extern "C" fn TIM7_IRQHandler() {
     let int_timer   = stm32hal::timer::Timer::init(board::l432kc::TIMER7_BASE);
     int_timer.clr_flag();
 
-    if gpiob.get_pin(board::l432kc::USER_LED) {
-        gpiob.set_pin(board::l432kc::USER_LED);
+    if gpiob.get_pin(board::l432kc::USER_LED_BIT) {
+        gpiob.clr_pin(board::l432kc::USER_LED_BIT);
     } else {
-        gpiob.set_pin(board::l432kc::USER_LED);
+        gpiob.set_pin(board::l432kc::USER_LED_BIT);
     }
 
     int_timer.start();

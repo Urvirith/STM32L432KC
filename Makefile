@@ -58,12 +58,17 @@ clean:
 	rm -f $(BIN_DIR)/*.bin
 	cargo clean
 
-# Flash the board us st-flash utility
 flash:
-	st-flash write $(BIN_DIR)main.bin 0x08000000
+	STM32_Programmer_CLI -c port=SWD -w $(BIN_DIR)/main.bin 0x08000000
+
+info:
+	STM32_Programmer_CLI -c port=SWD
 
 reset:
-	st-flash reset
+	STM32_Programmer_CLI -c port=SWD -rst
+
+hard_reset:
+	STM32_Programmer_CLI -c port=SWD -hardRst
 
 setup:
 	mkdir bin

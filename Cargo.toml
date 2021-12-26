@@ -2,7 +2,7 @@
 name = "STM32L432KC"
 version = "0.1.0"
 authors = ["Jake Mussler <jake.mussler@protonmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [lib]
 name = "cortex_m4"
